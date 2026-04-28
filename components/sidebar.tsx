@@ -4,15 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
+  Swords,
   LayoutDashboard,
   Megaphone,
   Search,
-  MousePointerClick,
   Share2,
   Mail,
   HeadphonesIcon,
   Receipt,
-  Hammer,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -20,16 +19,15 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 const NAV = [
-  { href: "/", label: "Overview", icon: LayoutDashboard },
-  { href: "/ads", label: "Ads", icon: Megaphone },
-  { href: "/seo", label: "SEO", icon: Search },
-  { href: "/cro", label: "CRO", icon: MousePointerClick },
-  { href: "/socials", label: "Socials", icon: Share2 },
-  { href: "/emails-sms", label: "Emails & SMS", icon: Mail },
+  { href: "/war-room", label: "War Room",        icon: Swords         },
+  { href: "/",         label: "Overview",         icon: LayoutDashboard },
+  { href: "/ads",      label: "Ads",              icon: Megaphone       },
+  { href: "/seo",      label: "SEO",              icon: Search          },
+  { href: "/socials",  label: "Socials",          icon: Share2          },
+  { href: "/emails-sms", label: "Emails & SMS",   icon: Mail            },
   { href: "/customer-service", label: "Customer Service", icon: HeadphonesIcon },
-  { href: "/taxes", label: "Taxes (IL)", icon: Receipt },
-  { href: "/ecom-builder", label: "Ecom Builder", icon: Hammer },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/taxes",    label: "Taxes (IL)",        icon: Receipt         },
+  { href: "/settings", label: "Settings",         icon: Settings        },
 ];
 
 export function Sidebar() {
@@ -47,10 +45,10 @@ export function Sidebar() {
     <aside className="w-64 shrink-0 h-screen sticky top-0 bg-surface border-r border-surface-border flex flex-col">
       <div className="px-5 py-5 border-b border-surface-border">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-white font-bold">P</div>
+          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-white font-bold">N</div>
           <div>
-            <div className="font-semibold text-ink leading-tight">Paidads</div>
-            <div className="text-[11px] text-ink-muted">Control panel</div>
+            <div className="font-semibold text-ink leading-tight">Nitos</div>
+            <div className="text-[11px] text-ink-muted">Command center</div>
           </div>
         </div>
       </div>

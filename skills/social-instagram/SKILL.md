@@ -173,3 +173,17 @@ Winner: "{caption}" (12k reach, 340 saves) → repurpose queued
 Loser: "{caption}" (1.8k reach, 11 saves) → archive
 DM funnels active: 2 (spring-guide, niche-quiz)
 ```
+
+
+---
+
+## Logging Protocol
+
+See `skills/_lib/logging-protocol.md` for the full SQL snippets.
+
+**Required at every run:**
+1. INSERT into `agent_runs` on start → save the returned `id` as `$RUN_ID`
+2. INSERT into `agent_logs` for every major action/decision/result as it happens
+3. UPDATE `agent_runs` on completion with `status`, `headline`, `cost_usd`, `tokens_used`, `kpis`
+
+Use the Supabase MCP `execute_sql` tool for all inserts. Log in plain English as if reporting to the owner.

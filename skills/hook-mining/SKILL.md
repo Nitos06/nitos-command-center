@@ -140,3 +140,17 @@ See `skills/_lib/self-heal.md`.
 - TikTok login wall on some content — solve with Playwright session cookie or scope to public-only
 - Instagram aggressive bot detection — may need residential proxy; budget $30/mo for Bright Data if free scraping rate-limits hard
 - Account_followers not always exposed inline → secondary scrape per profile (cache 30d)
+
+
+---
+
+## Logging Protocol
+
+See `skills/_lib/logging-protocol.md` for the full SQL snippets.
+
+**Required at every run:**
+1. INSERT into `agent_runs` on start → save the returned `id` as `$RUN_ID`
+2. INSERT into `agent_logs` for every major action/decision/result as it happens
+3. UPDATE `agent_runs` on completion with `status`, `headline`, `cost_usd`, `tokens_used`, `kpis`
+
+Use the Supabase MCP `execute_sql` tool for all inserts. Log in plain English as if reporting to the owner.

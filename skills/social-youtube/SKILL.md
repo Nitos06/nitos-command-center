@@ -125,3 +125,17 @@ Last 7d: 7 videos | avg 8.2k views | CTR 6.2%
 Winner: "{title}" (24k views, CTR 9.2%)
 Loser: "{title}" (1.1k views, CTR 2.8%) → regen via Path 2 queued
 ```
+
+
+---
+
+## Logging Protocol
+
+See `skills/_lib/logging-protocol.md` for the full SQL snippets.
+
+**Required at every run:**
+1. INSERT into `agent_runs` on start → save the returned `id` as `$RUN_ID`
+2. INSERT into `agent_logs` for every major action/decision/result as it happens
+3. UPDATE `agent_runs` on completion with `status`, `headline`, `cost_usd`, `tokens_used`, `kpis`
+
+Use the Supabase MCP `execute_sql` tool for all inserts. Log in plain English as if reporting to the owner.

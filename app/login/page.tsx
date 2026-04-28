@@ -29,10 +29,10 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-primary-bg px-4">
       <div className="w-full max-w-md card">
         <div className="flex items-center gap-2 mb-6">
-          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center text-white font-bold text-lg">P</div>
+          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center text-white font-bold text-lg">N</div>
           <div>
-            <div className="font-semibold text-ink text-lg leading-tight">Paidads</div>
-            <div className="text-xs text-ink-muted">All-in-one control panel</div>
+            <div className="font-semibold text-ink text-lg leading-tight">Nitos</div>
+            <div className="text-xs text-ink-muted">Command center</div>
           </div>
         </div>
 

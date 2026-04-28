@@ -115,3 +115,17 @@ Replacements issued: 3 (₪240 total)
 Escalations: 1 (refund demand — owner contacted)
 Avg confidence: 0.91 · Median reply delay: 14 min
 ```
+
+
+---
+
+## Logging Protocol
+
+See `skills/_lib/logging-protocol.md` for the full SQL snippets.
+
+**Required at every run:**
+1. INSERT into `agent_runs` on start → save the returned `id` as `$RUN_ID`
+2. INSERT into `agent_logs` for every major action/decision/result as it happens
+3. UPDATE `agent_runs` on completion with `status`, `headline`, `cost_usd`, `tokens_used`, `kpis`
+
+Use the Supabase MCP `execute_sql` tool for all inserts. Log in plain English as if reporting to the owner.
