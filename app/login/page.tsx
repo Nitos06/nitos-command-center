@@ -2,26 +2,27 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setStatus("sending");
+    setStatus("loading");
     setError(null);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setStatus("error");
-      setError(error.message);
+      setError("Wrong email or password.");
     } else {
-      setStatus("sent");
+      router.push("/war-room");
+      router.refresh();
     }
   }
 
@@ -36,31 +37,34 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {status === "sent" ? (
-          <div className="card-warm text-center">
-            <div className="text-accent-600 font-medium mb-1">Check your email</div>
-            <div className="text-sm text-ink-muted">We sent a magic link to <b>{email}</b>. Click it to sign in.</div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="kpi-label mb-1 block">Email</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="input"
+            />
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="kpi-label mb-1 block">Email</label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="input"
-              />
-            </div>
-            {error && <div className="text-sm text-status-crit">{error}</div>}
-            <button type="submit" disabled={status === "sending"} className="btn-primary w-full">
-              {status === "sending" ? "Sending…" : "Send magic link"}
-            </button>
-            <p className="text-xs text-ink-muted text-center">No password. We'll email you a one-time link.</p>
-          </form>
-        )}
+          <div>
+            <label className="kpi-label mb-1 block">Password</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="input"
+            />
+          </div>
+          {error && <div className="text-sm text-red-500">{error}</div>}
+          <button type="submit" disabled={status === "loading"} className="btn-primary w-full">
+            {status === "loading" ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
       </div>
     </div>
   );
