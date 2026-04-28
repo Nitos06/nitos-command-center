@@ -4,41 +4,38 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
-type Mode = "login" | "reset-sent";
-
 export default function LoginPage() {
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<Mode>("login");
-  const [status, setStatus] = useState<"idle" | "loading">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "signed-up">("idle");
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  async function handleLogin(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("loading");
     setError(null);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setStatus("idle");
-      setError("Wrong email or password.");
-    } else {
-      router.push("/war-room");
-      router.refresh();
-    }
-  }
 
-  async function handleForgot() {
-    if (!email) { setError("Enter your email first."); return; }
-    setStatus("loading");
-    setError(null);
-    const supabase = createClient();
-    await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/update-password`,
-    });
-    setStatus("idle");
-    setMode("reset-sent");
+    if (mode === "signin") {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setStatus("idle");
+        setError("Wrong email or password.");
+      } else {
+        router.push("/war-room");
+        router.refresh();
+      }
+    } else {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        setStatus("idle");
+        setError(error.message);
+      } else {
+        setStatus("signed-up");
+      }
+    }
   }
 
   return (
@@ -52,14 +49,32 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {mode === "reset-sent" ? (
+        {/* Tab switcher */}
+        <div className="flex rounded-xl bg-primary-50 p-1 mb-5 gap-1">
+          <button
+            type="button"
+            onClick={() => { setMode("signin"); setError(null); }}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${mode === "signin" ? "bg-white text-ink shadow-sm" : "text-ink-muted"}`}
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode("signup"); setError(null); }}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${mode === "signup" ? "bg-white text-ink shadow-sm" : "text-ink-muted"}`}
+          >
+            Create account
+          </button>
+        </div>
+
+        {status === "signed-up" ? (
           <div className="text-center py-4">
             <div className="font-medium text-ink mb-1">Check your email</div>
-            <div className="text-sm text-ink-muted">We sent a password reset link to <b>{email}</b>.<br />Click it to set your password, then come back and sign in.</div>
-            <button onClick={() => setMode("login")} className="btn-ghost mt-4 text-sm">Back to sign in</button>
+            <div className="text-sm text-ink-muted">We sent a confirmation link to <b>{email}</b>.<br />Click it to activate your account, then sign in.</div>
+            <button onClick={() => { setMode("signin"); setStatus("idle"); }} className="btn-ghost mt-4 text-sm">Back to sign in</button>
           </div>
         ) : (
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="kpi-label mb-1 block">Email</label>
               <input
@@ -76,6 +91,7 @@ export default function LoginPage() {
               <input
                 type="password"
                 required
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -84,10 +100,7 @@ export default function LoginPage() {
             </div>
             {error && <div className="text-sm text-red-500">{error}</div>}
             <button type="submit" disabled={status === "loading"} className="btn-primary w-full">
-              {status === "loading" ? "Signing in…" : "Sign in"}
-            </button>
-            <button type="button" onClick={handleForgot} disabled={status === "loading"} className="w-full text-xs text-ink-muted hover:text-ink text-center pt-1">
-              First time? Forgot password? → Send reset link
+              {status === "loading" ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
             </button>
           </form>
         )}
