@@ -87,8 +87,21 @@ bituach_leumi_owed = monthly_net × (7.7% slice 0–7,703 + 18% slice 7,703–51
 vat_owed          = vat_reports view for current period (per my-vat-rules.md)
 ```
 
-**Phase B.4 — Stair alert**
+**Phase B.4 — Stair alert + snapshot**
 Only emit alert if bracket changed since last run, or projected EOY would cross next sub-tier. Append to `state/finance-il/profit/{date}.json`.
+
+**Also upsert `tax_bracket_snapshots`** (brand_id, year, month) with:
+```sql
+INSERT INTO tax_bracket_snapshots (brand_id, year, month, mas_hachnasa_bracket, monthly_deposit_required, projected_annual_net, ytd_net_profit, updated_at)
+VALUES ($brand_id, $year, $month, $bracket_pct, $monthly_deposit, $projected_annual_net, $ytd_net_profit, now())
+ON CONFLICT (brand_id, year, month) DO UPDATE SET
+  mas_hachnasa_bracket = EXCLUDED.mas_hachnasa_bracket,
+  monthly_deposit_required = EXCLUDED.monthly_deposit_required,
+  projected_annual_net = EXCLUDED.projected_annual_net,
+  ytd_net_profit = EXCLUDED.ytd_net_profit,
+  updated_at = now();
+```
+This keeps the Taxes dashboard KPIs (`monthly_deposit_required`) always current without re-computing.
 
 ### Job C — Monthly 1st 06:00 — invoices + deposits
 

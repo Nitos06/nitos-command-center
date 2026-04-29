@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { formatMoney, formatNumber } from "@/lib/utils";
 import { Bot, Zap, AlertTriangle, CheckCircle2, Clock, Activity } from "lucide-react";
+import { createBrandedClient } from "@/lib/supabase/branded-query";
 
 const AGENT_META: Record<string, { label: string; category: string; schedule: string }> = {
   "meta-ads":           { label: "Meta Ads",           category: "Ads",      schedule: "Daily 09:00" },
@@ -70,28 +70,30 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default async function WarRoomPage() {
-  const supabase = await createClient();
+  const { supabase, brandId } = await createBrandedClient();
+
+  const eq = (q: any) => (brandId ? q.eq("brand_id", brandId) : q);
 
   const [{ data: runs }, { data: logs }, { data: alerts }, { data: profit }] = await Promise.all([
-    supabase
+    eq(supabase
       .from("agent_runs")
-      .select("*")
+      .select("*"))
       .order("started_at", { ascending: false })
       .limit(100),
-    supabase
+    eq(supabase
       .from("agent_logs")
-      .select("*")
+      .select("*"))
       .order("created_at", { ascending: false })
       .limit(80),
-    supabase
+    eq(supabase
       .from("alerts")
-      .select("*")
+      .select("*"))
       .eq("acknowledged", false)
       .order("created_at", { ascending: false })
       .limit(10),
-    supabase
+    eq(supabase
       .from("v_daily_profit")
-      .select("net_revenue,ad_spend,net_profit")
+      .select("net_revenue,ad_spend,net_profit"))
       .gte("date", new Date(Date.now() - 86_400_000).toISOString().slice(0, 10))
       .limit(1)
       .maybeSingle(),
@@ -104,12 +106,13 @@ export default async function WarRoomPage() {
   }
 
   const knownNames   = Object.keys(AGENT_META);
-  const unknownNames = [...new Set((runs ?? []).map((r: any) => r.agent_name as string))].filter(n => !knownNames.includes(n));
-  const allAgents    = [...knownNames, ...unknownNames];
+  const allRunNames = (runs ?? []).map((r: any) => String(r.agent_name));
+  const unknownNames = allRunNames.filter((n: string) => !knownNames.includes(n));
+  const allAgents: string[] = [...knownNames, ...Array.from(new Set<string>(unknownNames))];
 
-  const runningCount = Object.values(latestRun).filter((r) => r.status === "running").length;
-  const failedCount  = Object.values(latestRun).filter((r) => r.status === "failed").length;
-  const totalCost    = (runs ?? []).reduce((s, r: any) => s + Number(r.cost_usd ?? 0), 0);
+  const runningCount = Object.values(latestRun).filter((r: any) => r.status === "running").length;
+  const failedCount  = Object.values(latestRun).filter((r: any) => r.status === "failed").length;
+  const totalCost    = (runs ?? []).reduce((s: number, r: any) => s + Number(r.cost_usd ?? 0), 0);
 
   return (
     <>

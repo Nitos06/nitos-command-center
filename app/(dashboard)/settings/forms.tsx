@@ -9,6 +9,7 @@ import {
   addNiche,
   addBenchmark,
   upsertTaxEntity,
+  upsertBrandSettings,
   deleteRow,
 } from "./actions";
 
@@ -210,6 +211,31 @@ export function TaxEntityForm({ brands, current }: { brands: Brand[]; current: a
             {f.err && <span className="text-xs text-red-600">{f.err}</span>}
             <span />
             <Submit pending={f.pending} label="Save tax entity" />
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+export function BrandSettingsForm({ brandId, current }: { brandId: string; current: any | null }) {
+  const f = useFormAction((fd) => {
+    fd.append("brand_id", brandId);
+    return upsertBrandSettings(fd);
+  });
+  return (
+    <div>
+      <Toggle open={f.open} setOpen={f.setOpen} label={current ? "Edit" : "Configure"} />
+      {f.open && (
+        <form onSubmit={f.submit} className="mt-3 grid grid-cols-2 gap-2">
+          <input name="shopify_domain" defaultValue={current?.shopify_domain ?? ""} placeholder="mystore.myshopify.com" className="input col-span-1" />
+          <input name="ses_sender_email" defaultValue={current?.ses_sender_email ?? ""} placeholder="hello@brand.com (SES verified)" className="input col-span-1" />
+          <input name="meta_account_id" defaultValue={current?.meta_account_id ?? ""} placeholder="Meta ad account ID" className="input col-span-1" />
+          <input name="telegram_chat_id" defaultValue={current?.telegram_chat_id ?? ""} placeholder="Telegram chat ID" className="input col-span-1" />
+          <div className="col-span-2 flex justify-between items-center">
+            {f.err && <span className="text-xs text-red-600">{f.err}</span>}
+            <span />
+            <Submit pending={f.pending} label="Save brand settings" />
           </div>
         </form>
       )}

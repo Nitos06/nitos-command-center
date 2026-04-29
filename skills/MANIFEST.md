@@ -8,7 +8,7 @@ Single index of every skill in `paidads/skills/`. Source of truth for the cron r
 |---|---|---|---|
 | 1 | `finance-il` | mixed: `0 4 * * *` + `0 8 * * *` + `0 6 1 * *` + `*/15 * * * *` | 4 sub-jobs: daily reconcile + profit-watch, monthly invoices+BL deposits, 15-min Telegram poll |
 | 2 | `seo` | `0 2 */5 * *` + `0 6 * * 1,3,5,0` | every 5d audit (aggressive autofix) + 4×/week blog (18/mo) |
-| 3 | `email-marketing` | `0 7 * * 1` + monthly + nightly | Mailjet 4-flow + monthly micro-ideas + weekly campaigns + nightly deliverability |
+| 3 | `email-marketing` | `0 7 * * 1` + monthly + nightly | Amazon SES 4-flow + monthly micro-ideas + weekly campaigns + nightly deliverability |
 | 4 | `meta-ads` | `0 9 * * *` | full autonomy: insights → scale/kill/regen → CBO/ABO create → upload |
 | 5 | `ads-multi-platform` | `0 9 * * *` | TikTok/Google/YT/LinkedIn/Microsoft/Apple ads |
 | 6 | `ads-competitor` | `0 4 * * 0` | weekly Sun scrape via Apify |
@@ -22,6 +22,8 @@ Single index of every skill in `paidads/skills/`. Source of truth for the cron r
 | 14 | `dm-funnel` | event + `0 1 * * *` nightly stats | Superprofile-driven (DM automation + link-in-bio) |
 | 15 | `hook-mining` | `0 11 * * *` | daily hook library refresh |
 | 16 | `dashboard-bridge` | `*/5 * * * *` | every 5 min — aggregates all agent state for IU |
+| 17 | `social-facebook` | `0 11 * * *` + `0 17 * * *` | daily post (11:00) + comment replies (17:00) |
+| 18 | `reviews` | `0 6 * * *` + event `shopify.order.fulfilled` | daily UGC scan + quality scoring + review request emails (3d after fulfillment) |
 
 ## Event-fired (also have manual triggers)
 

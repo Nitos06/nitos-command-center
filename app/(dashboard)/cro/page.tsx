@@ -1,14 +1,16 @@
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Kpi, EmptyState } from "@/components/page-header";
 import { MousePointerClick } from "lucide-react";
+import { createBrandedClient } from "@/lib/supabase/branded-query";
 
 export default async function CroPage() {
-  const supabase = await createClient();
+  const { supabase, brandId } = await createBrandedClient();
+
+  const eq = (q: any) => (brandId ? q.eq("brand_id", brandId) : q);
 
   const [{ data: pages, count: pageCount }, { data: tests }, { data: audits }] = await Promise.all([
-    supabase.from("cro_pages").select("*", { count: "exact" }).limit(10),
-    supabase.from("ab_tests").select("*").order("started_at", { ascending: false }).limit(10),
-    supabase.from("cro_audits").select("*").order("run_at", { ascending: false }).limit(5),
+    eq(supabase.from("cro_pages").select("*", { count: "exact" })).limit(10),
+    eq(supabase.from("ab_tests").select("*")).order("started_at", { ascending: false }).limit(10),
+    eq(supabase.from("cro_audits").select("*")).order("run_at", { ascending: false }).limit(5),
   ]);
 
   const running = tests?.filter((t: any) => t.status === "running").length ?? 0;

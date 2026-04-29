@@ -87,7 +87,15 @@ Load `state/seo/audit/latest.json`. Identify regressions, wins, carry-overs (wit
 
 ### Phase A.5 — Aggressive autofix (Shopify MCP) — owner mandate "MUST work to improve everything"
 
-Execute all without owner approval:
+Execute all without owner approval using `mcp__shopify-theme__shopify_update_asset`, `mcp__shopify-theme__shopify_get_asset`, `mcp__shopify-theme__shopify_list_assets`:
+
+**For each fix**, before applying:
+1. `GET /assets/{file}` → read current content
+2. Apply targeted edit (never replace whole file if a substring edit suffices)
+3. `PUT /assets/{file}` → write updated content
+4. Insert into `seo_audits.issues_json` with `status: "applied"` and `before`/`after` diff
+
+**Fixes to execute (no approval gate):**
 - Generate + apply all missing alt text (from product/post title + image context)
 - Generate + apply all missing meta descriptions (from first paragraph)
 - Inject all missing schema (Product / Article / FAQ / BreadcrumbList / Organization)
@@ -97,6 +105,8 @@ Execute all without owner approval:
 - Auto-add internal links to pages ranked 5–15 in GSC (rising-star boost)
 - Fix sitemap entries + hreflang + canonical
 - Apply CRO flags from `state/meta-ads/lp-issues.json` (high CTR / low CVR pages → tighten copy, restructure)
+
+**After all fixes**, upsert `seo_audits` row with `issues_json` containing all fixes with statuses. This powers the Fix Queue card in the dashboard.
 
 ### Phase A.6 — Keyword discovery + implementation
 

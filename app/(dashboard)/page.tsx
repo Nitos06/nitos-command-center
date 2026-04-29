@@ -1,20 +1,24 @@
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Kpi } from "@/components/page-header";
 import { formatMoney, formatNumber } from "@/lib/utils";
 import { AlertCircle } from "lucide-react";
+import { createBrandedClient, brandFilter } from "@/lib/supabase/branded-query";
 
 export default async function OverviewPage() {
-  const supabase = await createClient();
+  const { supabase, brandId } = await createBrandedClient();
 
   const since = new Date();
   since.setDate(since.getDate() - 30);
   const sinceIso = since.toISOString().slice(0, 10);
 
+  const profitQuery = supabase.from("v_daily_profit").select("*").gte("date", sinceIso).order("date", { ascending: false });
+  const alertsQuery = supabase.from("alerts").select("*").eq("acknowledged", false).order("created_at", { ascending: false }).limit(5);
+  const runsQuery = supabase.from("routine_runs").select("*").order("started_at", { ascending: false }).limit(5);
+
   const [{ data: profit }, { data: brands }, { data: alerts }, { data: runs }] = await Promise.all([
-    supabase.from("v_daily_profit").select("*").gte("date", sinceIso).order("date", { ascending: false }),
+    brandId ? brandFilter(profitQuery, brandId) : profitQuery,
     supabase.from("brands").select("id, name, slug").eq("status", "active"),
-    supabase.from("alerts").select("*").eq("acknowledged", false).order("created_at", { ascending: false }).limit(5),
-    supabase.from("routine_runs").select("*").order("started_at", { ascending: false }).limit(5),
+    brandId ? brandFilter(alertsQuery, brandId) : alertsQuery,
+    brandId ? brandFilter(runsQuery, brandId) : runsQuery,
   ]);
 
   const agg = (profit ?? []).reduce(
@@ -31,7 +35,7 @@ export default async function OverviewPage() {
 
   return (
     <>
-      <PageHeader title="Overview" subtitle="Last 30 days across all brands" />
+      <PageHeader title="Overview" subtitle={brandId ? "Last 30 days" : "Last 30 days across all brands"} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Kpi label="Net revenue" value={formatMoney(agg.revenue)} />
