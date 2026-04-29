@@ -1,185 +1,314 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/page-header";
-import { formatMoney } from "@/lib/utils";
-import { Bot, Activity, Database } from "lucide-react";
+import { AGENTS, readSkillMeta, cronToHuman } from "@/lib/skills";
 import { RunButton } from "./run-button";
+import { Bot, Clock, Cpu, Link2, BookOpen, Layers, Activity, CheckCircle2, XCircle, AlertCircle, Circle } from "lucide-react";
 
-const AGENT_META: Record<string, {
-  label: string;
-  schedule: string;
-  writes: string;
-  routineId: string;
-}> = {
-  "finance-il-reconciliation":        { label: "Finance: Reconciliation",   schedule: "04:00 daily",        writes: "tax_bracket_snapshots, vat_reports",           routineId: "finance-il-reconciliation" },
-  "finance-il-profit-watch":          { label: "Finance: Profit Watch",     schedule: "08:00 daily",        writes: "agent_logs → Telegram",                        routineId: "finance-il-profit-watch" },
-  "finance-il-monthly":               { label: "Finance: Monthly",          schedule: "1st of month",       writes: "vat_reports, bituach_leumi_payments",          routineId: "finance-il-monthly" },
-  "finance-il-telegram-poll":         { label: "Finance: Receipt Scanner",  schedule: "Every 15 min",       writes: "invoice_uploads, expenses",                    routineId: "finance-il-telegram-poll" },
-  "reviews-daily":                    { label: "Reviews: Daily",            schedule: "06:00 daily",        writes: "ugc_assets, review_segments, email_sends",     routineId: "reviews-daily" },
-  "seo-audit-autofix":                { label: "SEO: Audit + Auto-fix",     schedule: "02:00 every 5 days", writes: "seo_audits, seo_keywords, Shopify theme",      routineId: "seo-audit-autofix" },
-  "seo-blog-post":                    { label: "SEO: Blog Post",            schedule: "06:00 Mon/Wed/Fri",  writes: "seo_pages → published to Shopify",             routineId: "seo-blog-post" },
-  "email-weekly-campaign":            { label: "Email: Weekly Campaign",    schedule: "07:00 Monday",       writes: "email_campaigns, email_sends",                 routineId: "email-weekly-campaign" },
-  "email-monthly-topic-bank":         { label: "Email: Topic Bank",         schedule: "1st of month",       writes: "email_flows",                                  routineId: "email-monthly-topic-bank" },
-  "email-deliverability-nightly":     { label: "Email: Deliverability",     schedule: "03:00 daily",        writes: "email_deliverability",                         routineId: "email-deliverability-nightly" },
-  "meta-ads-daily":                   { label: "Meta Ads: Adaptive Loop",   schedule: "09:00 daily",        writes: "campaigns, kill_scale_log, creatives",         routineId: "meta-ads-daily" },
-  "ads-multi-platform-daily":         { label: "Ads: Multi-Platform",       schedule: "09:00 daily",        writes: "campaigns, ad_insights_daily",                 routineId: "ads-multi-platform-daily" },
-  "ads-competitor-weekly":            { label: "Ads: Competitor Research",  schedule: "04:00 Sunday",       writes: "hook_patterns, creatives",                     routineId: "ads-competitor-weekly" },
-  "hook-mining-daily":                { label: "Hook Mining",               schedule: "11:00 daily",        writes: "hook_patterns, creatives",                     routineId: "hook-mining-daily" },
-  "analytics-daily":                  { label: "Analytics: Daily Sync",     schedule: "07:00 daily",        writes: "shopify_orders sync, agent_logs",              routineId: "analytics-daily" },
-  "advisory-weekly":                  { label: "Advisory: Weekly Report",   schedule: "08:00 Sunday",       writes: "agent_logs → Telegram report",                 routineId: "advisory-weekly" },
-  "social-instagram-weekly-calendar": { label: "Instagram: Weekly Plan",    schedule: "07:00 Monday",       writes: "social_content_calendar",                      routineId: "social-instagram-weekly-calendar" },
-  "social-instagram-daily":           { label: "Instagram: Daily Post",     schedule: "09:00 daily",        writes: "social_posts, social_agent_activity",          routineId: "social-instagram-daily" },
-  "social-tiktok-daily":              { label: "TikTok: Daily Post",        schedule: "10:00 daily",        writes: "social_posts, social_agent_activity",          routineId: "social-tiktok-daily" },
-  "social-youtube-weekly":            { label: "YouTube: Weekly Video",     schedule: "11:00 Tuesday",      writes: "social_posts (HeyGen video ID)",               routineId: "social-youtube-weekly" },
-  "social-pinterest-daily":           { label: "Pinterest: Daily Pins",     schedule: "12:00 daily",        writes: "social_posts × 10-15 pins",                   routineId: "social-pinterest-daily" },
-  "social-facebook-post":             { label: "Facebook: Daily Post",      schedule: "11:00 daily",        writes: "social_posts, social_agent_activity",          routineId: "social-facebook-post" },
-  "social-facebook-replies":          { label: "Facebook: Replies",         schedule: "17:00 daily",        writes: "social_agent_activity",                        routineId: "social-facebook-replies" },
-  "customer-service-poll":            { label: "Customer Service",          schedule: "Every 30 min 9-22",  writes: "cs_tickets, cs_messages",                      routineId: "customer-service-poll" },
-  "dm-funnel-nightly":                { label: "DM Funnel",                 schedule: "01:00 daily",        writes: "cs_tickets (instagram_dm)",                    routineId: "dm-funnel-nightly" },
-  "dashboard-bridge":                 { label: "Dashboard Bridge",          schedule: "Every 5 min",        writes: "shopify_orders real-time sync",                routineId: "dashboard-bridge" },
+const CATEGORY_COLORS: Record<string, string> = {
+  Finance:   "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  Reviews:   "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+  SEO:       "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  Email:     "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  Ads:       "bg-orange-500/10 text-orange-400 border-orange-500/20",
+  Analytics: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+  Social:    "bg-pink-500/10 text-pink-400 border-pink-500/20",
+  CX:        "bg-teal-500/10 text-teal-400 border-teal-500/20",
+  System:    "bg-gray-500/10 text-gray-400 border-gray-500/20",
 };
 
-function timeAgo(iso: string): string {
-  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
-  if (mins < 1) return "just now";
+function StatusDot({ status }: { status: string | null }) {
+  if (status === "success") return <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" />;
+  if (status === "failed")  return <span className="w-2 h-2 rounded-full bg-red-400 shrink-0 animate-pulse" />;
+  if (status === "queued")  return <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 animate-pulse" />;
+  return <span className="w-2 h-2 rounded-full bg-gray-600 shrink-0" />;
+}
+
+function McpBadge({ name, required }: { name: string; required: boolean }) {
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono border ${
+      required
+        ? "bg-primary-500/10 text-primary-400 border-primary-500/20"
+        : "bg-surface-tint text-ink-muted border-surface-border"
+    }`}>
+      {required && <span className="w-1 h-1 rounded-full bg-primary-400 mr-1 shrink-0" />}
+      {name}
+    </span>
+  );
+}
+
+function Chip({ name }: { name: string }) {
+  return (
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-surface-tint text-ink-muted border border-surface-border font-mono">
+      {name}
+    </span>
+  );
+}
+
+function timeAgo(date: string | null): string {
+  if (!date) return "Never";
+  const diff = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function durationStr(startedAt: string, finishedAt: string | null): string {
-  if (!finishedAt) return "—";
-  const ms = new Date(finishedAt).getTime() - new Date(startedAt).getTime();
-  return ms < 60_000 ? `${Math.round(ms / 1000)}s` : `${Math.round(ms / 60_000)}m`;
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const cls: Record<string, string> = { success: "badge-success", failed: "badge-crit", partial: "badge-warn", running: "badge-primary" };
-  return <span className={cls[status] ?? "badge-primary"}>{status}</span>;
-}
+const LIB_HOOKS = ["logging-protocol", "chain-contract", "self-heal"];
 
 export default async function AgentsPage() {
   const supabase = await createClient();
 
-  const { data: recentRuns } = await supabase
-    .from("routine_runs")
-    .select("*")
-    .order("started_at", { ascending: false })
-    .limit(200);
+  const [{ data: recentRuns }, { data: activityLogs }] = await Promise.all([
+    supabase
+      .from("routine_runs")
+      .select("routine_name, status, started_at, finished_at, artifacts, error_summary")
+      .order("started_at", { ascending: false })
+      .limit(200),
+    supabase
+      .from("agent_logs")
+      .select("id, brand_id, agent_name, type, message, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
 
-  const latestByAgent: Record<string, any> = {};
+  const lastRunMap: Record<string, any> = {};
   for (const run of recentRuns ?? []) {
-    if (!latestByAgent[run.routine_name]) latestByAgent[run.routine_name] = run;
+    if (!lastRunMap[run.routine_name]) lastRunMap[run.routine_name] = run;
   }
 
-  const knownNames = Object.keys(AGENT_META);
-  const allNames = [
-    ...knownNames,
-    ...[...new Set((recentRuns ?? []).map((r: any) => r.routine_name as string))].filter(
-      (n) => !knownNames.includes(n)
-    ),
-  ];
+  const ok     = AGENTS.filter(a => lastRunMap[a.id]?.status === "success").length;
+  const failed = AGENTS.filter(a => lastRunMap[a.id]?.status === "failed").length;
+  const never  = AGENTS.filter(a => !lastRunMap[a.id]).length;
 
-  const runningCount = Object.values(latestByAgent).filter((r) => r.status === "running").length;
-  const failedCount = Object.values(latestByAgent).filter((r) => r.status === "failed").length;
-  const totalCost = (recentRuns ?? []).reduce((s, r: any) => s + Number(r.cost_usd ?? 0), 0);
+  const skillCache: Record<string, ReturnType<typeof readSkillMeta>> = {};
+  for (const agent of AGENTS) {
+    if (!skillCache[agent.skillDir]) {
+      skillCache[agent.skillDir] = readSkillMeta(agent.skillDir);
+    }
+  }
 
   return (
     <>
-      <PageHeader title="Agents" subtitle="26 routines — Vercel Cron fires them, Claude API runs them, Supabase stores results" />
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="card"><div className="kpi-label">Total agents</div><div className="kpi-value">{allNames.length}</div></div>
-        <div className="card"><div className="kpi-label">Running now</div><div className="kpi-value" style={{ color: runningCount > 0 ? "var(--color-primary)" : undefined }}>{runningCount}</div></div>
-        <div className="card"><div className="kpi-label">Failed (last run)</div><div className="kpi-value" style={{ color: failedCount > 0 ? "#dc2626" : undefined }}>{failedCount}</div></div>
-        <div className="card"><div className="kpi-label">Cost (last 200 runs)</div><div className="kpi-value">{formatMoney(totalCost, "USD")}</div></div>
-      </div>
-
-      <div className="card-warm mb-6 text-sm leading-relaxed">
-        <div className="font-medium text-accent-700 mb-1">How it works</div>
-        <p className="text-accent-600 text-xs">
-          <strong>Vercel Cron</strong> fires each routine on schedule →
-          calls <code className="bg-white px-1 rounded">/api/routines/[name]</code> →
-          reads <code className="bg-white px-1 rounded">skills/[name]/SKILL.md</code> →
-          <strong> Claude API</strong> executes it using <code className="bg-white px-1 rounded">database_query</code> (Supabase SQL) and <code className="bg-white px-1 rounded">http_request</code> (Shopify / Meta / Telegram / DataForSEO / etc.) →
-          results written to Supabase → <strong>this app displays them</strong>.
-          No PC needed. Click <strong>Run</strong> on any agent to trigger it now.
-        </p>
-      </div>
-
-      <div className="mb-6">
-        <h2 className="font-semibold text-ink mb-3">Agent status</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {allNames.map((name) => {
-            const meta = AGENT_META[name];
-            const run = latestByAgent[name];
-            return (
-              <div key={name} className="card border border-surface-border">
-                <div className="flex items-start justify-between gap-2 mb-1.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-primary-50 flex items-center justify-center shrink-0">
-                      <Bot className="w-3.5 h-3.5 text-primary-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-medium text-ink text-sm truncate">{meta?.label ?? name}</div>
-                      <div className="text-xs text-ink-muted">{meta?.schedule ?? "—"}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {run ? <StatusBadge status={run.status} /> : <span className="badge-primary opacity-50 text-xs">never run</span>}
-                    {meta && <RunButton routine={meta.routineId} />}
-                  </div>
-                </div>
-                {meta?.writes && (
-                  <div className="flex items-center gap-1 text-[10px] text-ink-muted mt-0.5">
-                    <Database className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{meta.writes}</span>
-                  </div>
-                )}
-                {run && (
-                  <div className="mt-1.5 space-y-0.5">
-                    {run.artifacts?.headline && <p className="text-xs text-ink line-clamp-1">{run.artifacts.headline}</p>}
-                    {run.error_summary && <p className="text-xs text-red-600 line-clamp-1">{run.error_summary}</p>}
-                    <div className="flex justify-between text-[10px] text-ink-muted pt-0.5">
-                      <span>{timeAgo(run.started_at)}</span>
-                      <span>{durationStr(run.started_at, run.finished_at)}{run.cost_usd ? ` · ${formatMoney(run.cost_usd, "USD")}` : ""}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-bold text-ink flex items-center gap-2">
+            <Bot className="w-5 h-5 text-primary-400" />
+            Agents
+          </h1>
+          <p className="text-xs text-ink-muted mt-0.5">
+            26 autonomous agents · Claude Code CLI on VPS · 24/7
+          </p>
+        </div>
+        <div className="flex items-center gap-4 text-xs">
+          <span className="flex items-center gap-1.5 text-green-400">
+            <CheckCircle2 className="w-3.5 h-3.5" />{ok} ok
+          </span>
+          <span className="flex items-center gap-1.5 text-red-400">
+            <XCircle className="w-3.5 h-3.5" />{failed} failed
+          </span>
+          <span className="flex items-center gap-1.5 text-gray-500">
+            <Circle className="w-3.5 h-3.5" />{never} never run
+          </span>
         </div>
       </div>
 
-      <div className="card">
-        <h2 className="font-semibold text-ink mb-3 flex items-center gap-2">
-          <Activity className="w-4 h-4 text-primary-600" />
-          Recent runs
-          <span className="text-xs font-normal text-ink-muted">(last 50)</span>
-        </h2>
-        {(recentRuns?.length ?? 0) === 0 ? (
-          <p className="text-sm text-ink-muted">No runs yet. Click "Run" on any agent above to trigger the first one.</p>
+      {/* Activity Feed */}
+      <div className="card mb-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Activity className="w-4 h-4 text-primary-400" />
+          <span className="font-semibold text-ink text-sm">Live Activity</span>
+          <span className="text-[10px] text-ink-muted ml-auto">agent_logs · last 50</span>
+        </div>
+        {(activityLogs?.length ?? 0) === 0 ? (
+          <p className="text-xs text-ink-muted py-6 text-center">
+            No activity yet — agents will log here once the VPS is running
+          </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-ink-muted text-xs">
-                <tr><th className="py-2 pr-4">Agent</th><th className="pr-4">When</th><th className="pr-4">Status</th><th className="pr-4">Duration</th><th>Cost</th></tr>
-              </thead>
-              <tbody>
-                {(recentRuns ?? []).slice(0, 50).map((r: any) => (
-                  <tr key={r.id} className="border-t border-surface-border">
-                    <td className="py-2 pr-4 font-medium text-ink">{AGENT_META[r.routine_name]?.label ?? r.routine_name}</td>
-                    <td className="pr-4 text-ink-muted whitespace-nowrap text-xs">{timeAgo(r.started_at)}</td>
-                    <td className="pr-4"><StatusBadge status={r.status} /></td>
-                    <td className="pr-4 text-ink-muted text-xs">{durationStr(r.started_at, r.finished_at)}</td>
-                    <td className="text-ink-muted text-xs">{r.cost_usd ? formatMoney(r.cost_usd, "USD") : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="max-h-52 overflow-y-auto font-mono">
+            {activityLogs!.map((log: any) => (
+              <div key={log.id} className="flex items-start gap-2 py-1.5 border-b border-surface-border last:border-0">
+                <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
+                  log.type === "error" ? "bg-red-400" : log.type === "warn" ? "bg-amber-400" : "bg-green-400"
+                }`} />
+                <span className="text-[10px] text-ink-subtle w-20 shrink-0">{timeAgo(log.created_at)}</span>
+                <span className="text-[10px] text-primary-400 w-36 shrink-0 truncate">{log.agent_name}</span>
+                <span className="text-[10px] text-ink flex-1 min-w-0 truncate">{log.message}</span>
+              </div>
+            ))}
           </div>
         )}
+      </div>
+
+      {/* Agent Cards */}
+      <div className="space-y-1.5">
+        {AGENTS.map(agent => {
+          const meta = skillCache[agent.skillDir];
+          const lastRun = lastRunMap[agent.id];
+          const catColor = CATEGORY_COLORS[agent.category] ?? CATEGORY_COLORS.System;
+          const schedule = meta?.schedule || agent.schedule;
+          const agentRuns = (recentRuns ?? []).filter(r => r.routine_name === agent.id).slice(0, 5);
+
+          return (
+            <details key={agent.id} className="group card p-0 overflow-hidden">
+
+              {/* ── Summary row (always visible) ── */}
+              <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer list-none select-none hover:bg-surface-tint/40 transition-colors">
+                <StatusDot status={lastRun?.status ?? null} />
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-sm text-ink">{agent.label}</span>
+                    <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border ${catColor}`}>
+                      {agent.category}
+                    </span>
+                  </div>
+                  {meta?.description && (
+                    <p className="text-[11px] text-ink-muted mt-0.5 truncate max-w-2xl">{meta.description}</p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0 text-[10px] text-ink-muted">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {cronToHuman(schedule)}
+                  </span>
+                  {meta && (meta.mcpsRequired.length + meta.mcpsOptional.length) > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Cpu className="w-3 h-3" />
+                      {meta.mcpsRequired.length + meta.mcpsOptional.length} MCPs
+                    </span>
+                  )}
+                  <span>{timeAgo(lastRun?.started_at ?? null)}</span>
+                  <RunButton routine={agent.id} />
+                  <svg className="w-3.5 h-3.5 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </summary>
+
+              {/* ── Expanded detail ── */}
+              <div className="border-t border-surface-border px-4 py-4 bg-surface-tint/20 grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+                {/* Left: MCPs, refs, hooks */}
+                <div className="space-y-3">
+
+                  {meta && meta.mcpsRequired.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Cpu className="w-3 h-3 text-primary-400" />
+                        <span className="text-[10px] font-bold text-ink uppercase tracking-wider">MCPs — Required</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {meta.mcpsRequired.map(m => <McpBadge key={m} name={m} required />)}
+                      </div>
+                    </div>
+                  )}
+
+                  {meta && meta.mcpsOptional.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Cpu className="w-3 h-3 text-ink-muted" />
+                        <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">MCPs — Optional</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {meta.mcpsOptional.map(m => <McpBadge key={m} name={m} required={false} />)}
+                      </div>
+                    </div>
+                  )}
+
+                  {meta && meta.references.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Link2 className="w-3 h-3 text-ink-muted" />
+                        <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">References</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {meta.references.map(r => <Chip key={r} name={r} />)}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <BookOpen className="w-3 h-3 text-ink-muted" />
+                      <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">Hooks (_lib)</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {LIB_HOOKS.map(h => <Chip key={h} name={h} />)}
+                    </div>
+                  </div>
+
+                  <div className="pt-1 text-[10px] font-mono text-ink-subtle">
+                    skills/{agent.skillDir}/SKILL.md · cron: {schedule}
+                  </div>
+                </div>
+
+                {/* Right: state files + run history */}
+                <div className="space-y-3">
+
+                  {meta && meta.inputs.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Layers className="w-3 h-3 text-ink-muted" />
+                        <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">Reads</span>
+                      </div>
+                      <div className="space-y-0.5 font-mono">
+                        {meta.inputs.map(i => (
+                          <div key={i} className="text-[10px] text-ink-muted">{i}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {meta && meta.outputs.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Layers className="w-3 h-3 text-primary-400" />
+                        <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">Writes</span>
+                      </div>
+                      <div className="space-y-0.5 font-mono">
+                        {meta.outputs.slice(0, 7).map(o => (
+                          <div key={o} className="text-[10px] text-ink-muted">{o}</div>
+                        ))}
+                        {meta.outputs.length > 7 && (
+                          <div className="text-[10px] text-ink-subtle">+{meta.outputs.length - 7} more</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Activity className="w-3 h-3 text-ink-muted" />
+                      <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">Recent runs</span>
+                    </div>
+                    {agentRuns.length === 0 ? (
+                      <p className="text-[10px] text-ink-subtle">No runs recorded yet</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {agentRuns.map((run: any, i: number) => (
+                          <div key={i} className="flex items-center gap-2">
+                            {run.status === "success"
+                              ? <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
+                              : run.status === "failed"
+                              ? <XCircle className="w-3 h-3 text-red-400 shrink-0" />
+                              : <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />}
+                            <span className="text-[10px] text-ink-muted shrink-0 w-16">{timeAgo(run.started_at)}</span>
+                            <span className="text-[10px] text-ink flex-1 truncate">
+                              {run.artifacts?.headline ?? run.error_summary ?? run.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </details>
+          );
+        })}
       </div>
     </>
   );
