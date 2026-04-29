@@ -1,7 +1,24 @@
 import { createClient } from "@/lib/supabase/server";
 import { AGENTS, readSkillMeta, cronToHuman } from "@/lib/skills";
 import { RunButton } from "./run-button";
-import { Bot, Clock, Cpu, Link2, BookOpen, Layers, Activity, CheckCircle2, XCircle, AlertCircle, Circle } from "lucide-react";
+import { Bot, Clock, Cpu, Link2, BookOpen, Layers, Activity, CheckCircle2, XCircle, AlertCircle, Circle, Github, Key, ExternalLink, Terminal } from "lucide-react";
+
+const GITHUB_REPO = "https://github.com/Nitos06/nitos-command-center";
+const SKILLS_BASE  = `${GITHUB_REPO}/tree/main/skills`;
+const RUN_SCRIPT   = `${GITHUB_REPO}/blob/main/scripts/run-routine.sh`;
+
+const ENV_VARS = [
+  { key: "ANTHROPIC_API_KEY",              required: true,  hint: "Claude Code CLI auth" },
+  { key: "NEXT_PUBLIC_SUPABASE_URL",       required: true,  hint: "Supabase project URL" },
+  { key: "SUPABASE_SERVICE_ROLE_KEY",      required: true,  hint: "Supabase service role" },
+  { key: "SHOPIFY_STORE_DOMAIN",           required: false, hint: "Per-brand via connections table" },
+  { key: "SHOPIFY_ACCESS_TOKEN",           required: false, hint: "Per-brand via connections table" },
+  { key: "META_ACCESS_TOKEN",              required: false, hint: "Per-brand via connections table" },
+  { key: "AWS_SES_ACCESS_KEY_ID",          required: false, hint: "Amazon SES for email sending" },
+  { key: "AWS_SES_SECRET_ACCESS_KEY",      required: false, hint: "Amazon SES for email sending" },
+  { key: "TELEGRAM_BOT_TOKEN",             required: false, hint: "Finance agent receipt polling" },
+  { key: "CRON_SECRET",                    required: false, hint: "Secures /api/routines webhook" },
+];
 
 const CATEGORY_COLORS: Record<string, string> = {
   Finance:   "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
@@ -98,7 +115,7 @@ export default async function AgentsPage() {
             Agents
           </h1>
           <p className="text-xs text-ink-muted mt-0.5">
-            26 autonomous agents · Claude Code CLI on VPS · 24/7
+            26 autonomous agents · Claude Code CLI · reads from GitHub repo
           </p>
         </div>
         <div className="flex items-center gap-4 text-xs">
@@ -111,6 +128,82 @@ export default async function AgentsPage() {
           <span className="flex items-center gap-1.5 text-gray-500">
             <Circle className="w-3.5 h-3.5" />{never} never run
           </span>
+        </div>
+      </div>
+
+      {/* GitHub + Environment */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+
+        {/* GitHub repo */}
+        <div className="card">
+          <div className="flex items-center gap-2 mb-3">
+            <Github className="w-4 h-4 text-primary-400" />
+            <span className="font-semibold text-ink text-sm">GitHub repo — source of truth</span>
+          </div>
+          <p className="text-xs text-ink-muted mb-3">
+            Every agent reads its SKILL.md, references, and _lib hooks from the repo. Keep it up to date — the runner pulls <code className="bg-surface-tint px-1 rounded font-mono">git pull --quiet origin main</code> before each run.
+          </p>
+          <div className="space-y-1.5">
+            {[
+              { label: "Main repo",       href: GITHUB_REPO,               hint: "Nitos06/nitos-command-center" },
+              { label: "Skills folder",   href: SKILLS_BASE,               hint: "skills/{dir}/SKILL.md" },
+              { label: "Run script",      href: RUN_SCRIPT,                hint: "scripts/run-routine.sh" },
+              { label: "Shared _lib",     href: `${SKILLS_BASE}/_lib`,     hint: "logging-protocol · chain-contract · self-heal" },
+            ].map(l => (
+              <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-between px-3 py-2 rounded-xl bg-surface-tint border border-surface-border hover:border-primary-400/40 transition-colors group">
+                <div>
+                  <span className="text-xs font-medium text-ink">{l.label}</span>
+                  <span className="text-[10px] text-ink-muted ml-2 font-mono">{l.hint}</span>
+                </div>
+                <ExternalLink className="w-3 h-3 text-ink-subtle group-hover:text-primary-400 transition-colors" />
+              </a>
+            ))}
+          </div>
+        </div>
+
+        {/* Environment variables */}
+        <div className="card">
+          <div className="flex items-center gap-2 mb-3">
+            <Key className="w-4 h-4 text-primary-400" />
+            <span className="font-semibold text-ink text-sm">Required environment variables</span>
+          </div>
+          <p className="text-xs text-ink-muted mb-3">
+            Set these wherever your runner lives (Vercel env vars, VPS <code className="bg-surface-tint px-1 rounded">.env</code>, or GitHub Actions secrets). Per-brand API keys come from Supabase <code className="bg-surface-tint px-1 rounded">connections</code> table at runtime.
+          </p>
+          <div className="space-y-1">
+            {ENV_VARS.map(v => (
+              <div key={v.key} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-tint border border-surface-border">
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${v.required ? "bg-primary-400" : "bg-gray-500"}`} />
+                <span className="text-[10px] font-mono text-ink flex-1">{v.key}</span>
+                <span className="text-[10px] text-ink-subtle text-right">{v.hint}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* How it works */}
+      <div className="card mb-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Terminal className="w-4 h-4 text-primary-400" />
+          <span className="font-semibold text-ink text-sm">How agents execute</span>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 text-xs text-ink-muted">
+          {[
+            { step: "1", title: "Cron / trigger", body: "Routine fires on schedule (or Run Now button queues it in routine_runs)" },
+            { step: "2", title: "Git pull",        body: "Runner pulls latest SKILL.md, references, and _lib from GitHub main branch" },
+            { step: "3", title: "Prompt built",   body: "SKILL + references + _lib + active brands injected into prompt for Claude Code" },
+            { step: "4", title: "Claude executes", body: "claude --dangerously-skip-permissions -p \"$PROMPT\" — uses all configured MCPs, writes to Supabase, logs to agent_logs" },
+          ].map(s => (
+            <div key={s.step} className="flex gap-2.5">
+              <span className="w-5 h-5 rounded-full bg-primary-500/20 text-primary-400 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{s.step}</span>
+              <div>
+                <div className="font-semibold text-ink text-[11px] mb-0.5">{s.title}</div>
+                <div className="leading-relaxed">{s.body}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -240,8 +333,18 @@ export default async function AgentsPage() {
                     </div>
                   </div>
 
-                  <div className="pt-1 text-[10px] font-mono text-ink-subtle">
-                    skills/{agent.skillDir}/SKILL.md · cron: {schedule}
+                  <div className="pt-1 text-[10px] font-mono text-ink-subtle flex items-center gap-2 flex-wrap">
+                    <a
+                      href={`${GITHUB_REPO}/blob/main/skills/${agent.skillDir}/SKILL.md`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-400 hover:underline flex items-center gap-0.5"
+                    >
+                      <Github className="w-2.5 h-2.5" />
+                      skills/{agent.skillDir}/SKILL.md
+                    </a>
+                    <span className="text-ink-subtle">·</span>
+                    <span>cron: {schedule}</span>
                   </div>
                 </div>
 

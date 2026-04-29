@@ -11,6 +11,7 @@
     "db:reset": "supabase db reset"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@aws-sdk/client-sesv2": "^3.750.0",
 "@modelcontextprotocol/sdk": "^1.29.0",
     "@supabase/ssr": "^0.5.2",

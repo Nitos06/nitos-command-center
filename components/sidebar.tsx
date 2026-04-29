@@ -19,7 +19,6 @@ import {
   Zap,
   HelpCircle,
   Users,
-  MousePointerClick,
   Hammer,
   Bot,
   PenLine,
@@ -63,7 +62,6 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "Analyze",
     items: [
-      { href: "/cro",          label: "CRO",          icon: MousePointerClick },
       { href: "/taxes",        label: "Taxes (IL)",   icon: Receipt           },
       { href: "/ecom-builder", label: "Ecom Builder", icon: Hammer            },
       { href: "/agents",       label: "Agents",       icon: Bot               },
