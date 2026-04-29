@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runRoutine } from "@/lib/routines/runner";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
+
 // Vercel Cron calls this as GET with Authorization: Bearer $CRON_SECRET
 export async function GET(
   req: NextRequest,
