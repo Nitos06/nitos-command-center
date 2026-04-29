@@ -23,10 +23,10 @@ import {
   Hammer,
   Bot,
   PenLine,
+  BookOpen,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { BrandSwitcher } from "@/components/brand-switcher";
 
 type NavItem = { href: string; label: string; icon: React.ElementType };
 type NavSection = { label: string; items: NavItem[] };
@@ -67,6 +67,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/taxes",        label: "Taxes (IL)",   icon: Receipt           },
       { href: "/ecom-builder", label: "Ecom Builder", icon: Hammer            },
       { href: "/agents",       label: "Agents",       icon: Bot               },
+      { href: "/setup",        label: "Setup & Docs", icon: BookOpen          },
     ],
   },
 ];
@@ -96,9 +97,6 @@ export function Sidebar() {
           </div>
         </div>
       </div>
-
-      {/* Brand Switcher */}
-      <BrandSwitcher />
 
       {/* Nav */}
       <nav className="flex-1 px-2 py-3 overflow-y-auto space-y-0.5">

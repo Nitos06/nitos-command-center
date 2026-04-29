@@ -1,7 +1,35 @@
 {
   "functions": {
-    "app/api/mcp/route.ts": {
-      "maxDuration": 60
-    }
-  }
+    "app/api/mcp/route.ts": { "maxDuration": 60 },
+    "app/api/routines/[routine]/route.ts": { "maxDuration": 300 }
+  },
+  "crons": [
+    { "path": "/api/routines/finance-il-reconciliation",        "schedule": "0 1 * * *"       },
+    { "path": "/api/routines/finance-il-profit-watch",          "schedule": "0 5 * * *"       },
+    { "path": "/api/routines/finance-il-monthly",               "schedule": "0 3 1 * *"       },
+    { "path": "/api/routines/finance-il-telegram-poll",         "schedule": "*/15 * * * *"    },
+    { "path": "/api/routines/reviews-daily",                    "schedule": "0 3 * * *"       },
+    { "path": "/api/routines/seo-audit-autofix",                "schedule": "0 23 */5 * *"    },
+    { "path": "/api/routines/seo-blog-post",                    "schedule": "0 3 * * 1,3,5"   },
+    { "path": "/api/routines/email-weekly-campaign",            "schedule": "0 4 * * 1"       },
+    { "path": "/api/routines/email-monthly-topic-bank",         "schedule": "0 21 28 * *"     },
+    { "path": "/api/routines/email-deliverability-nightly",     "schedule": "0 0 * * *"       },
+    { "path": "/api/routines/meta-ads-daily",                   "schedule": "0 6 * * *"       },
+    { "path": "/api/routines/ads-multi-platform-daily",         "schedule": "0 6 * * *"       },
+    { "path": "/api/routines/ads-competitor-weekly",            "schedule": "0 1 * * 0"       },
+    { "path": "/api/routines/hook-mining-daily",                "schedule": "0 8 * * *"       },
+    { "path": "/api/routines/analytics-daily",                  "schedule": "0 4 * * *"       },
+    { "path": "/api/routines/advisory-weekly",                  "schedule": "0 5 * * 0"       },
+    { "path": "/api/routines/social-instagram-weekly-calendar", "schedule": "0 4 * * 1"       },
+    { "path": "/api/routines/social-instagram-daily",           "schedule": "0 6 * * *"       },
+    { "path": "/api/routines/social-tiktok-daily",              "schedule": "0 7 * * *"       },
+    { "path": "/api/routines/social-youtube-weekly",            "schedule": "0 8 * * 2"       },
+    { "path": "/api/routines/social-pinterest-daily",           "schedule": "0 9 * * *"       },
+    { "path": "/api/routines/social-facebook-post",             "schedule": "0 8 * * *"       },
+    { "path": "/api/routines/social-facebook-replies",          "schedule": "0 14 * * *"      },
+    { "path": "/api/routines/customer-service-poll",            "schedule": "*/30 6-19 * * *" },
+    { "path": "/api/routines/dm-funnel-nightly",                "schedule": "0 22 * * *"      },
+    { "path": "/api/routines/dashboard-bridge",                 "schedule": "*/5 * * * *"     }
+  ]
 }
+
