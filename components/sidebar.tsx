@@ -15,6 +15,7 @@ import {
   Hammer,
   Settings,
   LogOut,
+  Filter,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -25,6 +26,7 @@ const NAV = [
   { href: "/seo", label: "SEO", icon: Search },
   { href: "/cro", label: "CRO", icon: MousePointerClick },
   { href: "/socials", label: "Socials", icon: Share2 },
+  { href: "/funnels", label: "Funnels", icon: Filter },
   { href: "/emails-sms", label: "Emails & SMS", icon: Mail },
   { href: "/customer-service", label: "Customer Service", icon: HeadphonesIcon },
   { href: "/taxes", label: "Taxes (IL)", icon: Receipt },

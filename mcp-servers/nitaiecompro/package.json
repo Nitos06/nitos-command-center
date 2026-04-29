@@ -1,0 +1,16 @@
+{
+  "name": "nitaiecompro-mcp",
+  "version": "0.1.0",
+  "description": "Full-access MCP for the nitaiecompro app — brands, funnels, ads, contacts, profit, CRO, SEO, CS, taxes",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server-http.js",
+    "start:stdio": "node index.js",
+    "start:http": "node server-http.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@supabase/supabase-js": "^2.46.1"
+  }
+}
