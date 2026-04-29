@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, FunctionDeclarationSchemaType } from "@google/generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from "fs";
 import path from "path";
 import { executeDatabaseQuery, executeHttpRequest, getServiceClient } from "./tools";
@@ -14,9 +14,9 @@ const TOOLS = [
 Supports SELECT, INSERT, UPDATE, UPSERT (INSERT ... ON CONFLICT DO UPDATE), DELETE.
 RLS is bypassed — you have full access. Always use RETURNING * for writes.`,
         parameters: {
-          type: FunctionDeclarationSchemaType.OBJECT,
+          type: "object",
           properties: {
-            sql: { type: FunctionDeclarationSchemaType.STRING, description: "SQL statement to execute" },
+            sql: { type: "string", description: "SQL statement to execute" },
           },
           required: ["sql"],
         },
@@ -29,19 +29,19 @@ Telegram Bot API, DataForSEO REST API, HeyGen API, Submagic API, YouTube Data AP
 TikTok API, Pinterest API, Apify API, Amazon SES.
 Get per-brand tokens first with database_query on the connections table.`,
         parameters: {
-          type: FunctionDeclarationSchemaType.OBJECT,
+          type: "object",
           properties: {
-            method: { type: FunctionDeclarationSchemaType.STRING, description: "GET POST PUT PATCH DELETE" },
-            url: { type: FunctionDeclarationSchemaType.STRING, description: "Full URL" },
-            headers: { type: FunctionDeclarationSchemaType.OBJECT, description: "HTTP headers as key-value pairs" },
-            body: { type: FunctionDeclarationSchemaType.STRING, description: "JSON-serialised request body" },
+            method: { type: "string", description: "GET POST PUT PATCH DELETE" },
+            url: { type: "string", description: "Full URL" },
+            headers: { type: "object", description: "HTTP headers as key-value pairs" },
+            body: { type: "string", description: "JSON-serialised request body" },
           },
           required: ["method", "url"],
         },
       },
     ],
   },
-];
+] as any;
 
 export async function runRoutine(routineName: string) {
   const startedAt = new Date();
