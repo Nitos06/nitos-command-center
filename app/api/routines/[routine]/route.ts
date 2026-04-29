@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runRoutine } from "@/lib/routines/runner";
+import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
+export const maxDuration = 30;
 
-// Vercel Cron calls this as GET with Authorization: Bearer $CRON_SECRET
+function serviceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
+// VPS can optionally call GET with Authorization: Bearer $CRON_SECRET
+// to record that a run started (VPS executes via Claude Code CLI, not here)
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ routine: string }> }
@@ -16,19 +24,25 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }
-
   const { routine } = await params;
-  const result = await runRoutine(routine);
-  return NextResponse.json(result, { status: result.ok ? 200 : 500 });
+  await serviceClient().from("routine_runs").insert({
+    routine_name: routine,
+    started_at: new Date().toISOString(),
+    status: "queued",
+  });
+  return NextResponse.json({ ok: true, message: `${routine} queued — VPS executes via Claude Code` });
 }
 
-// Dashboard "Run now" button calls this as POST (requires Supabase session)
+// Dashboard "Run now" button — queues the routine, VPS dashboard-bridge picks it up
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ routine: string }> }
 ) {
   const { routine } = await params;
-  // Fire and forget — return immediately, routine runs in background
-  runRoutine(routine).catch(console.error);
-  return NextResponse.json({ ok: true, message: `Routine '${routine}' started` });
+  await serviceClient().from("routine_runs").insert({
+    routine_name: routine,
+    started_at: new Date().toISOString(),
+    status: "queued",
+  });
+  return NextResponse.json({ ok: true, message: `${routine} queued — VPS will execute within 5 min` });
 }
