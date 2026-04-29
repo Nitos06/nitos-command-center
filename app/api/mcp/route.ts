@@ -16,13 +16,15 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
-// ── Supabase ─────────────────────────────────────────────────────────────────
+// ── Supabase (lazy — env vars not available at build time) ───────────────────
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+function getSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+}
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
@@ -36,6 +38,7 @@ function checkAuth(req: NextRequest): boolean {
 
 function buildServer() {
   const server = new McpServer({ name: 'nitaiecompro-mcp', version: '0.2.0' });
+  const supabase = getSupabase();
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
