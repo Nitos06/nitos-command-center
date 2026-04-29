@@ -213,6 +213,16 @@
         "HOSTINGER_API_TOKEN": "${HOSTINGER_API_TOKEN}"
       },
       "_note": "Custom thin wrapper — Hostinger has no official MCP. Used for DNS / domain ops only."
+    },
+
+    "nitaiecompro": {
+      "command": "node",
+      "args": ["./mcp-servers/nitaiecompro/index.js"],
+      "env": {
+        "SUPABASE_URL": "https://wjqmjcgixscrethrthin.supabase.co",
+        "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndqcW1qY2dpeHNjcmV0aHJ0aGluIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzM4MzA2OSwiZXhwIjoyMDkyOTU5MDY5fQ.qxstaZgjXxgUQ7g7fPBRWPgfnlHGl5RAtYwU990Cadk"
+      },
+      "_note": "Full-access MCP for nitaiecompro — 38 tools covering brands, ads, funnels, contacts, lead magnets, email sequences, landing pages, socials, SEO, CRO, CS, taxes, and raw SQL."
     }
 
   }
