@@ -5,17 +5,17 @@ export interface ShopifyConfig {
   adminToken: string;
 }
 
-async function getShopifyConfig(brandId?: string): Promise<ShopifyConfig | null> {
+async function getShopifyConfig(brandId: string): Promise<ShopifyConfig | null> {
   const supabase = await createClient();
-  const query = supabase
+  const { data } = await supabase
     .from("connections")
     .select("*")
+    .eq("brand_id", brandId)
     .eq("platform", "shopify")
-    .eq("status", "connected");
+    .eq("status", "connected")
+    .limit(1)
+    .maybeSingle();
 
-  if (brandId) query.eq("brand_id", brandId);
-
-  const { data } = await query.limit(1).maybeSingle();
   if (!data) return null;
 
   return {
@@ -26,8 +26,8 @@ async function getShopifyConfig(brandId?: string): Promise<ShopifyConfig | null>
 
 export async function shopifyAdminFetch<T = unknown>(
   query: string,
-  variables?: Record<string, unknown>,
-  brandId?: string
+  variables: Record<string, unknown> | undefined,
+  brandId: string
 ): Promise<T> {
   const config = await getShopifyConfig(brandId);
   if (!config) throw new Error("No Shopify connection found. Add one in Settings → Connections.");
@@ -51,9 +51,9 @@ export async function shopifyAdminFetch<T = unknown>(
 
 export async function shopifyAdminRest<T = unknown>(
   path: string,
-  method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
-  body?: unknown,
-  brandId?: string
+  method: "GET" | "POST" | "PUT" | "DELETE",
+  body: unknown | undefined,
+  brandId: string
 ): Promise<T> {
   const config = await getShopifyConfig(brandId);
   if (!config) throw new Error("No Shopify connection found. Add one in Settings → Connections.");

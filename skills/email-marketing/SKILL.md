@@ -1,6 +1,6 @@
 ---
 name: email-marketing
-description: Mailjet-powered email engine. 4 mandatory one-time flows (Welcome 8 / Cart+Checkout 8 / Post-Purchase 3 / Win-back 4). 30-type weekly campaign catalog with Gruns/hybrid/text-only tiering. Macro→micro topic engine produces 3 campaigns/week (2 educational + 1 fun). Deliverability shrink-to-win when Open<45%. Nightly segmentation refresh. Ecom quiz + popup form specs.
+description: Amazon SES-powered email engine. 4 mandatory one-time flows (Welcome 8 / Cart+Checkout 8 / Post-Purchase 3 / Win-back 4). 30-type weekly campaign catalog with Gruns/hybrid/text-only tiering. Macro→micro topic engine produces 3 campaigns/week (2 educational + 1 fun). Deliverability shrink-to-win when Open<45%. Nightly segmentation refresh. Ecom quiz + popup form specs.
 trigger:
   scheduled:
     - "0 7 * * 1 Asia/Jerusalem"        # weekly Mon 07:00 — campaign engine
@@ -9,7 +9,6 @@ trigger:
   event: "brand-onboarding"             # one-time 4-flow + quiz + popup setup
 mcp_dependencies:
   required:
-    - mailjet
     - supabase
   optional:
     - shopify
@@ -46,7 +45,13 @@ aviv_refs:
 self_heal: skills/_lib/self-heal.md
 ---
 
-# Email Marketing Agent (Mailjet)
+# Email Marketing Agent (Amazon SES)
+
+**Sending layer: Amazon SES v2.** All outbound email goes through `POST /api/email/send` (which calls `lib/ses.ts`). Mailjet is no longer used. Bounce/complaint/open/click events come back via SNS → `POST /api/webhooks/ses` → written to `email_sends` + `email_deliverability` Supabase tables.
+
+**SES config (from `brand_settings`):**
+- `ses_sender_email` — verified FROM address
+- `SES_CONFIGURATION_SET` — env var pointing to the SES configuration set that publishes events to SNS
 
 Single agent. Four jobs.
 
@@ -124,17 +129,34 @@ Skimmable + Clear&Concise + Engaging. Bolded main points. ONE main takeaway per 
 #### C.6 Design
 Per `my-gruns-style-rules.md` for image campaigns. Infographics: checklists, icons, comparison charts, timelines, numbered lists, flow charts, graphs. CTAs obvious. Mobile-first.
 
-#### C.7 Schedule via Mailjet
-3 sends per week. Send to base segment (X-Day Engaged).
+#### C.7 Send via SES
+Call `POST /api/email/send` with `{ bulk: true, to: [email array], subject, html, brand_id, campaign_id }`.
+3 sends per week. Send to base segment (X-Day Engaged). Insert `email_campaigns` row before sending, update `status='sent'` after.
 
 ### Job D — Nightly 03:00 — deliverability + segmentation
 
-#### D.1 Pull metrics
-- Open Rate (target >45%)
-- Click Rate (target >1%)
-- Bounce Rate (target <1%)
-- Spam Complaint Rate (target <0.01%)
+#### D.1 Pull metrics from Supabase
+Query `email_deliverability` for last 30 days per brand. Compute:
+- Open Rate (target >45%) — `opened / delivered`
+- Click Rate (target >1%) — `clicked / delivered`
+- Bounce Rate (target <1%) — `bounced / sent`
+- Spam Complaint Rate (target <0.01%) — `complaints / sent`
 - Unsubscribe Rate (target <0.5%)
+
+Also upsert today's row in `email_deliverability`:
+```sql
+INSERT INTO email_deliverability (brand_id, date, sent, delivered, bounced, complaints, opened, clicked, delivery_rate)
+SELECT brand_id, CURRENT_DATE,
+  COUNT(*), COUNT(*) FILTER (WHERE delivered), COUNT(*) FILTER (WHERE bounced),
+  COUNT(*) FILTER (WHERE complained), COUNT(*) FILTER (WHERE opened),
+  COUNT(*) FILTER (WHERE clicked),
+  ROUND(COUNT(*) FILTER (WHERE delivered)::numeric / NULLIF(COUNT(*),0) * 100, 2)
+FROM email_sends WHERE sent_at::date = CURRENT_DATE GROUP BY brand_id
+ON CONFLICT (brand_id, date) DO UPDATE SET
+  sent=EXCLUDED.sent, delivered=EXCLUDED.delivered, bounced=EXCLUDED.bounced,
+  complaints=EXCLUDED.complaints, opened=EXCLUDED.opened, clicked=EXCLUDED.clicked,
+  delivery_rate=EXCLUDED.delivery_rate;
+```
 
 #### D.2 Shrink-to-win recovery (if Open <45%)
 Per `my-deliverability-protocol.md`:

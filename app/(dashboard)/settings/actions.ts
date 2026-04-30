@@ -105,6 +105,22 @@ export async function upsertTaxEntity(formData: FormData) {
   return { ok: true };
 }
 
+export async function upsertBrandSettings(formData: FormData) {
+  const supabase = await createClient();
+  const brand_id = s(formData.get("brand_id"));
+  if (!brand_id) return { error: "brand_id required" };
+  const { error } = await supabase.from("brand_settings").upsert({
+    brand_id,
+    shopify_domain: s(formData.get("shopify_domain")),
+    ses_sender_email: s(formData.get("ses_sender_email")),
+    meta_account_id: s(formData.get("meta_account_id")),
+    telegram_chat_id: s(formData.get("telegram_chat_id")),
+  }, { onConflict: "brand_id" });
+  if (error) return { error: error.message };
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
 export async function deleteRow(table: string, id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from(table).delete().eq("id", id);

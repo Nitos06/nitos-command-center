@@ -49,3 +49,4 @@ next-env.d.ts
 #   ARE pushed (small JSON, needed on new laptop).
 # skills/**/references/my-*.md ARE pushed (the owner's bible — without these, skills are placeholders).
 # Repo MUST stay PRIVATE — it contains brand strategy + skill playbooks (competitive IP).
+.vercel

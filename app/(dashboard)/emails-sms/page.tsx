@@ -1,62 +1,89 @@
-import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Kpi, EmptyState } from "@/components/page-header";
-import { formatMoney, formatPct } from "@/lib/utils";
-import { Mail } from "lucide-react";
+import { createBrandedClient } from "@/lib/supabase/branded-query";
+import { EmailApp } from "./email-app";
 
 export default async function EmailsSmsPage() {
-  const supabase = await createClient();
+  const { supabase, brandId } = await createBrandedClient();
 
-  const since = new Date();
-  since.setDate(since.getDate() - 30);
-  const sinceIso = since.toISOString();
+  const since90 = new Date();
+  since90.setDate(since90.getDate() - 90);
+  const since90Iso  = since90.toISOString();
+  const since90Date = since90.toISOString().slice(0, 10);
+  const since7Date  = new Date(Date.now() - 7  * 864e5).toISOString().slice(0, 10);
+  const since30Date = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
 
-  const [{ data: flows }, { data: campaigns }, { data: sends }] = await Promise.all([
-    supabase.from("email_flows").select("*").eq("is_active", true),
-    supabase.from("email_campaigns").select("*").order("sent_at", { ascending: false }).limit(10),
-    supabase.from("email_sends").select("opened, clicked, converted, revenue").gte("sent_at", sinceIso),
+  const eq = (q: any) => (brandId ? q.eq("brand_id", brandId) : q);
+
+  const [
+    { data: flows },
+    { data: campaigns },
+    { data: sends },
+    { data: segments },
+    { data: deliverability90 },
+    { data: agentLogs },
+    { data: brandSettings },
+    { data: contacts },
+  ] = await Promise.all([
+    eq(supabase.from("email_flows").select("*")).order("created_at", { ascending: false }),
+    eq(supabase.from("email_campaigns").select("*")).order("created_at", { ascending: false }).limit(100),
+    eq(supabase.from("email_sends").select("opened,clicked,converted,revenue,bounced,delivered,spam,sent_at")).gte("sent_at", since90Iso),
+    eq(supabase.from("segments").select("*")).order("subscriber_count", { ascending: false }),
+    eq(supabase.from("email_deliverability").select("*")).gte("date", since90Date).order("date", { ascending: true }),
+    eq(supabase.from("agent_logs").select("*")).eq("agent_name", "email-marketing").order("created_at", { ascending: false }).limit(50),
+    brandId ? supabase.from("brand_settings").select("*").eq("brand_id", brandId).maybeSingle() : Promise.resolve({ data: null }),
+    eq(supabase.from("segments").select("id,name,subscriber_count,type,created_at,last_synced_at")).order("subscriber_count", { ascending: false }),
   ]);
 
-  const total = sends?.length ?? 0;
-  const opens = sends?.filter((s: any) => s.opened).length ?? 0;
-  const clicks = sends?.filter((s: any) => s.clicked).length ?? 0;
-  const revenue = sends?.reduce((s: number, r: any) => s + Number(r.revenue ?? 0), 0) ?? 0;
-  const openRate = total > 0 ? (opens / total) * 100 : 0;
-  const ctr = total > 0 ? (clicks / total) * 100 : 0;
+  // Aggregate stats
+  const total     = sends?.length ?? 0;
+  const delivered = sends?.filter((s: any) => s.delivered).length ?? 0;
+  const opens     = sends?.filter((s: any) => s.opened).length   ?? 0;
+  const clicks    = sends?.filter((s: any) => s.clicked).length  ?? 0;
+  const bounces   = sends?.filter((s: any) => s.bounced).length  ?? 0;
+  const spam      = sends?.filter((s: any) => s.spam).length     ?? 0;
+  const revenue   = sends?.reduce((s: number, r: any) => s + Number(r.revenue ?? 0), 0) ?? 0;
+
+  const openRate    = delivered > 0 ? (opens   / delivered) * 100 : 0;
+  const ctr         = delivered > 0 ? (clicks  / delivered) * 100 : 0;
+  const bounceRate  = total     > 0 ? (bounces / total)     * 100 : 0;
+  const spamRate    = total     > 0 ? (spam    / total)     * 100 : 0;
+  const deliverRate = total     > 0 ? (delivered / total)   * 100 : 0;
+
+  const chartData = (deliverability90 ?? []).map((d: any) => ({
+    date:       new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    delivered:  d.sent > 0 ? Math.round((d.delivered ?? d.sent) / d.sent * 100) : 0,
+    openRate:   d.sent > 0 ? Math.round((d.opened   / d.sent) * 100) : 0,
+    clickRate:  d.sent > 0 ? Math.round((d.clicked  / d.sent) * 100) : 0,
+    bounceRate: d.sent > 0 ? Math.round((d.bounced  / d.sent) * 100) : 0,
+    spamRate:   d.sent > 0 ? Math.round(((d.spam ?? 0) / d.sent) * 100) : 0,
+    sent:       d.sent ?? 0,
+    raw: d,
+  }));
+
+  // Total stats across all time from deliverability
+  const totalDelivered90 = (deliverability90 ?? []).reduce((s: number, d: any) => s + (d.delivered ?? d.sent ?? 0), 0);
+  const totalOpened90    = (deliverability90 ?? []).reduce((s: number, d: any) => s + (d.opened  ?? 0), 0);
+  const totalClicked90   = (deliverability90 ?? []).reduce((s: number, d: any) => s + (d.clicked ?? 0), 0);
+  const totalBounced90   = (deliverability90 ?? []).reduce((s: number, d: any) => s + (d.bounced ?? 0), 0);
+  const totalSent90      = (deliverability90 ?? []).reduce((s: number, d: any) => s + (d.sent    ?? 0), 0);
+  const totalSpam90      = (deliverability90 ?? []).reduce((s: number, d: any) => s + (d.spam    ?? 0), 0);
+  const totalUnsub90     = (deliverability90 ?? []).reduce((s: number, d: any) => s + (d.unsubscribed ?? 0), 0);
 
   return (
-    <>
-      <PageHeader title="Emails & SMS" subtitle="Flows, campaigns, segments, attribution — 30 days" />
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Kpi label="Active flows" value={String(flows?.length ?? 0)} />
-        <Kpi label="Open rate" value={formatPct(openRate)} />
-        <Kpi label="Click rate" value={formatPct(ctr)} />
-        <Kpi label="Attributed revenue" value={formatMoney(revenue)} />
-      </div>
-
-      <div className="card">
-        <h2 className="font-semibold text-ink mb-3">Recent campaigns</h2>
-        {(campaigns?.length ?? 0) === 0 ? (
-          <EmptyState icon={Mail} title="No campaigns yet" hint="Connect Klaviyo in Settings to sync flows and campaigns." />
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="text-left text-ink-muted">
-              <tr><th className="py-2">Campaign</th><th>Channel</th><th>Segment</th><th>Sent</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              {campaigns!.map((c: any) => (
-                <tr key={c.id} className="border-t border-surface-border">
-                  <td className="py-2 font-medium text-ink">{c.name}</td>
-                  <td className="text-ink-muted">{c.channel}</td>
-                  <td className="text-ink-muted">{c.segment ?? "—"}</td>
-                  <td className="text-ink-muted">{c.sent_at ? new Date(c.sent_at).toLocaleDateString() : "—"}</td>
-                  <td><span className={c.status === "sent" ? "badge-success" : "badge-primary"}>{c.status}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </>
+    <EmailApp
+      brandId={brandId}
+      flows={flows ?? []}
+      campaigns={campaigns ?? []}
+      segments={segments ?? []}
+      contacts={contacts ?? []}
+      chartData={chartData}
+      agentLogs={agentLogs ?? []}
+      brandSettings={brandSettings}
+      stats={{
+        total, delivered, opens, clicks, bounces, spam, revenue,
+        openRate, ctr, bounceRate, spamRate, deliverRate,
+        totalSent90, totalDelivered90, totalOpened90, totalClicked90,
+        totalBounced90, totalSpam90, totalUnsub90,
+      }}
+    />
   );
 }

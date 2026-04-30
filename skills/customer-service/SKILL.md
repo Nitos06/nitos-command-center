@@ -74,10 +74,25 @@ Randomize reply post within next 0–25 min (not all at top of hour). Skip night
 ### Phase 7 — Log + escalate
 
 - Insert Supabase `cx_conversations` (full thread)
+- **Upsert `cs_tickets`**: one row per external thread. Fields: `brand_id`, `customer_name`, `customer_email`, `channel` (instagram_dm | gmail), `subject`, `status` (open | waiting_customer | resolved), `priority` (normal | high | urgent), `first_response_at` (set on first reply), `resolved_at` (set when closed).
+- **Insert `agent_logs`** for every action (classify, reply-sent, escalate, faq-match, ticket-created):
+  ```sql
+  INSERT INTO agent_logs (brand_id, agent_name, type, message, created_at)
+  VALUES ($brand_id, 'customer-service', $type, $message, now());
+  -- type: 'action' | 'info' | 'error'
+  ```
+- **When FAQ is matched and used**: `UPDATE cs_faq SET times_used = times_used + 1 WHERE id = $faq_id`
 - If self-scored confidence <0.85 → flag `latest-status.alerts` for owner review
 - If complaint > replacement cap OR customer demands a refund → Telegram owner with quick-action buttons
 
-### Phase 8 — Persist + dashboard
+### Phase 8 — Daily summary (23:55 IL only)
+
+Compute daily summary and upsert to `agent_logs` with `type='info'`:
+```
+message: "Daily summary: {replies_sent} replies ({ig_dm} IG DM, {gmail} Gmail) · {complaints} complaints · {replacements} replacements · {escalations} escalations · avg confidence {avg_conf}"
+```
+
+### Phase 9 — Persist + dashboard
 
 `state/customer-service/replies/{date}.json`. Push status to `dashboard-bridge`.
 

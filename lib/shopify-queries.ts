@@ -2,7 +2,7 @@ import { shopifyAdminFetch, shopifyAdminRest } from "./shopify";
 
 // ─── Products ──────────────────────────────────────────────────────────────
 
-export async function getProducts(limit = 50, brandId?: string) {
+export async function getProducts(limit = 50, brandId: string) {
   const data = await shopifyAdminFetch<{ products: { edges: { node: ShopifyProduct }[] } }>(
     `query GetProducts($first: Int!) {
       products(first: $first) {
@@ -38,7 +38,7 @@ export async function getProducts(limit = 50, brandId?: string) {
   return data.products.edges.map((e) => e.node);
 }
 
-export async function updateVariantPrice(variantId: string, price: string, compareAtPrice?: string, brandId?: string) {
+export async function updateVariantPrice(variantId: string, price: string, brandId: string, compareAtPrice?: string) {
   return shopifyAdminFetch(
     `mutation UpdateVariant($input: ProductVariantInput!) {
       productVariantUpdate(input: $input) {
@@ -53,7 +53,7 @@ export async function updateVariantPrice(variantId: string, price: string, compa
 
 // ─── Orders ────────────────────────────────────────────────────────────────
 
-export async function getOrders(limit = 50, sinceDate?: string, brandId?: string) {
+export async function getOrders(brandId: string, limit = 50, sinceDate?: string) {
   const query = sinceDate ? `created_at:>='${sinceDate}'` : undefined;
   const data = await shopifyAdminFetch<{ orders: { edges: { node: ShopifyOrder }[] } }>(
     `query GetOrders($first: Int!, $query: String) {
@@ -92,7 +92,7 @@ export async function getOrders(limit = 50, sinceDate?: string, brandId?: string
 
 // ─── Customers ─────────────────────────────────────────────────────────────
 
-export async function getCustomers(limit = 100, brandId?: string) {
+export async function getCustomers(limit = 100, brandId: string) {
   const data = await shopifyAdminFetch<{ customers: { edges: { node: ShopifyCustomer }[] } }>(
     `query GetCustomers($first: Int!) {
       customers(first: $first, sortKey: TOTAL_SPENT, reverse: true) {
@@ -119,7 +119,7 @@ export async function getCustomers(limit = 100, brandId?: string) {
 
 // ─── Script Tags (for widget injection) ───────────────────────────────────
 
-export async function addScriptTag(src: string, brandId?: string) {
+export async function addScriptTag(src: string, brandId: string) {
   return shopifyAdminRest(
     "script_tags.json",
     "POST",
@@ -128,7 +128,7 @@ export async function addScriptTag(src: string, brandId?: string) {
   );
 }
 
-export async function listScriptTags(brandId?: string) {
+export async function listScriptTags(brandId: string) {
   return shopifyAdminRest<{ script_tags: { id: number; src: string }[] }>(
     "script_tags.json",
     "GET",
@@ -137,7 +137,7 @@ export async function listScriptTags(brandId?: string) {
   );
 }
 
-export async function deleteScriptTag(scriptTagId: number, brandId?: string) {
+export async function deleteScriptTag(scriptTagId: number, brandId: string) {
   return shopifyAdminRest(`script_tags/${scriptTagId}.json`, "DELETE", undefined, brandId);
 }
 
@@ -147,7 +147,7 @@ export async function createAutomaticDiscount(
   title: string,
   value: number,
   valueType: "PERCENTAGE" | "FIXED_AMOUNT",
-  brandId?: string
+  brandId: string
 ) {
   return shopifyAdminFetch(
     `mutation CreateDiscount($discount: DiscountAutomaticBasicInput!) {
@@ -178,7 +178,7 @@ export async function createPriceRuleCode(
   code: string,
   value: number,
   valueType: "percentage" | "fixed_amount",
-  brandId?: string
+  brandId: string
 ) {
   const res = await shopifyAdminRest<{ price_rule: { id: number } }>(
     "price_rules.json",

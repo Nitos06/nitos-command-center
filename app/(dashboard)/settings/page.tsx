@@ -9,6 +9,7 @@ import {
   NicheForm,
   BenchmarkForm,
   TaxEntityForm,
+  BrandSettingsForm,
   DeleteButton,
 } from "./forms";
 
@@ -22,6 +23,7 @@ export default async function SettingsPage() {
     { data: benchmarks },
     { data: niches },
     { data: taxEntity },
+    { data: brandSettingsList },
   ] = await Promise.all([
     supabase.from("brands").select("*").order("created_at", { ascending: true }),
     supabase.from("subscriptions").select("*").eq("is_active", true).order("created_at", { ascending: false }),
@@ -29,6 +31,7 @@ export default async function SettingsPage() {
     supabase.from("benchmarks").select("*").limit(50),
     supabase.from("niches").select("*"),
     supabase.from("tax_entities").select("*").limit(1).maybeSingle(),
+    supabase.from("brand_settings").select("*"),
   ]);
 
   const totalMonthlyUsd = subs?.reduce((s: number, r: any) => s + Number(r.monthly_cost_usd ?? 0), 0) ?? 0;
@@ -45,6 +48,35 @@ export default async function SettingsPage() {
         <Kpi label="Monthly cost (USD)" value={formatMoney(totalMonthlyUsd, "USD")} />
         <Kpi label="Monthly cost (ILS)" value={formatMoney(totalMonthlyIls)} />
       </div>
+
+      {/* PER-BRAND SETTINGS */}
+      {(brands?.length ?? 0) > 0 && (
+        <div className="card mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-ink">Per-brand settings</h2>
+            <span className="text-xs text-ink-muted">SES · Meta · Shopify · Gemini</span>
+          </div>
+          <div className="space-y-3">
+            {brands!.map((brand: any) => {
+              const bs = brandSettingsList?.find((s: any) => s.brand_id === brand.id);
+              return (
+                <div key={brand.id} className="px-4 py-3 rounded-xl bg-surface-tint border border-surface-border">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-medium text-ink text-sm">{brand.name}</div>
+                    <BrandSettingsForm brandId={brand.id} current={bs} />
+                  </div>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1 text-xs">
+                    <div><span className="text-ink-muted">SES from:</span> <span className="text-ink">{bs?.ses_sender_email ?? <span className="text-red-400">not set</span>}</span></div>
+                    <div><span className="text-ink-muted">Shopify:</span> <span className="text-ink">{bs?.shopify_domain ?? <span className="text-amber-500">not set</span>}</span></div>
+                    <div><span className="text-ink-muted">Meta account:</span> <span className="text-ink">{bs?.meta_account_id ?? "—"}</span></div>
+                    <div><span className="text-ink-muted">Brand bible:</span> <span className="text-ink">{bs?.brand_bible ? "✓ configured" : "—"}</span></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* BRANDS */}

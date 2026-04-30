@@ -1,27 +1,29 @@
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Kpi, EmptyState } from "@/components/page-header";
 import { StarRating } from "@/components/reviews/star-rating";
 import { ReviewsTable } from "./reviews-table";
 import { SegmentsPanel } from "./segments-panel";
-import { Star, Download, Zap } from "lucide-react";
+import { Star, Download, Zap, ImageIcon, Video, Share2 } from "lucide-react";
+import { createBrandedClient } from "@/lib/supabase/branded-query";
 
 export default async function ReviewsPage() {
-  const supabase = await createClient();
+  const { supabase, brandId } = await createBrandedClient();
+
+  const eq = (q: any) => (brandId ? q.eq("brand_id", brandId) : q);
 
   const [
     { data: reviews, count: totalCount },
     { data: pending },
     { data: segments },
     { data: brands },
+    { data: ugcAssets },
   ] = await Promise.all([
-    supabase
-      .from("reviews")
-      .select("*", { count: "exact" })
+    eq(supabase.from("reviews").select("*", { count: "exact" }))
       .order("created_at", { ascending: false })
       .limit(50),
-    supabase.from("reviews").select("id", { count: "exact" }).eq("status", "pending"),
-    supabase.from("review_segments").select("*").order("created_at", { ascending: false }),
+    eq(supabase.from("reviews").select("id", { count: "exact" })).eq("status", "pending"),
+    eq(supabase.from("review_segments").select("*")).order("created_at", { ascending: false }),
     supabase.from("brands").select("id, name").eq("status", "active"),
+    eq(supabase.from("ugc_assets").select("*")).order("quality_score", { ascending: false }).limit(20),
   ]);
 
   const approved = (reviews ?? []).filter((r: any) => r.status === "approved");
@@ -56,7 +58,6 @@ export default async function ReviewsPage() {
         }
       />
 
-      {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Kpi label="Total reviews" value={String(totalCount ?? 0)} />
         <div className="card hover:shadow-card-hover transition-shadow">
@@ -71,7 +72,6 @@ export default async function ReviewsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Main reviews table */}
         <div className="lg:col-span-2 card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-ink">All reviews</h2>
@@ -93,11 +93,9 @@ export default async function ReviewsPage() {
           )}
         </div>
 
-        {/* Segments + import sidebar */}
         <div className="space-y-4">
           <SegmentsPanel segments={segments ?? []} brands={brandList} />
 
-          {/* Import card */}
           <div className="card">
             <h3 className="font-bold text-ink text-sm mb-3">Import</h3>
             <div className="space-y-2">
@@ -112,7 +110,6 @@ export default async function ReviewsPage() {
             </div>
           </div>
 
-          {/* Widget status card */}
           <div className="card">
             <h3 className="font-bold text-ink text-sm mb-3">Store Widget</h3>
             <p className="text-xs text-ink-muted mb-3 leading-relaxed">
@@ -123,6 +120,59 @@ export default async function ReviewsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* UGC Assets */}
+      <div className="card mt-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-ink flex items-center gap-2">
+            <ImageIcon className="w-4 h-4 text-primary-500" />
+            UGC Asset Library
+          </h2>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-ink-muted">{ugcAssets?.length ?? 0} assets · AI-scored</span>
+            {brandId && (
+              <button className="btn-outline text-xs px-3 py-1.5 flex items-center gap-1.5">
+                <Share2 className="w-3.5 h-3.5" />
+                Export top to Meta
+              </button>
+            )}
+          </div>
+        </div>
+        {(ugcAssets?.length ?? 0) === 0 ? (
+          <div className="py-8 text-center text-sm text-ink-muted">
+            <ImageIcon className="w-8 h-8 mx-auto mb-2 text-ink-subtle" />
+            No UGC assets yet. The reviews agent scans new reviews daily for images and videos,
+            scores quality (1–10), and surfaces the best for ads.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {ugcAssets!.map((asset: any) => (
+              <div key={asset.id} className="relative rounded-xl overflow-hidden border border-surface-border group">
+                {asset.type === "video" ? (
+                  <div className="aspect-square bg-surface-tint flex items-center justify-center">
+                    <Video className="w-8 h-8 text-ink-muted" />
+                  </div>
+                ) : (
+                  <img
+                    src={asset.url}
+                    alt=""
+                    className="aspect-square object-cover w-full"
+                    loading="lazy"
+                  />
+                )}
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white text-xs font-semibold">{asset.quality_score ?? "—"}/10</span>
+                    {asset.used_in_ads && (
+                      <span className="text-[10px] bg-green-500 text-white px-1.5 rounded-full">In ads</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
