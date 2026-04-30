@@ -39,14 +39,28 @@ const STEP_TYPE_META: Record<StepType, { label: string; color: "green" | "blue" 
 };
 
 /* ─── Step Card in Builder ──────────────────────── */
-function StepRow({ step, idx, onRemove }: { step: any; idx: number; onRemove: () => void }) {
+interface StepData {
+  id: number;
+  step_type: StepType;
+  product_title: string;
+  product_id: string;
+  discount_pct: string;
+  headline: string;
+  subheadline: string;
+  button_text: string;
+  decline_text: string;
+}
+
+function StepRow({ step, idx, onChange, onRemove }: { step: StepData; idx: number; onChange: (updated: StepData) => void; onRemove: () => void }) {
   const [open, setOpen] = useState(false);
-  const meta = STEP_TYPE_META[step.type as StepType] ?? STEP_TYPE_META.upsell;
+  const meta = STEP_TYPE_META[step.step_type] ?? STEP_TYPE_META.upsell;
+  const set = (field: keyof StepData, value: string) => onChange({ ...step, [field]: value });
+
   return (
     <div className="border border-gray-200 rounded-xl bg-gray-50">
       <div className="flex items-center gap-2 px-3 py-2.5 cursor-pointer" onClick={() => setOpen(o => !o)}>
-        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold text-white bg-indigo-500 flex-shrink-0`}>{idx + 1}</span>
-        <span className="flex-1 text-sm text-gray-800 font-medium">{meta.icon} {step.type}</span>
+        <span className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold text-white bg-indigo-500 flex-shrink-0">{idx + 1}</span>
+        <span className="flex-1 text-sm text-gray-800 font-medium">{meta.icon} {step.step_type}</span>
         <Badge label={meta.label} color={meta.color} />
         <ChevronDown className={`w-4 h-4 text-gray-400 transition ${open ? "rotate-180" : ""}`} />
         <button onClick={e => { e.stopPropagation(); onRemove(); }} className="p-1 text-gray-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -54,31 +68,74 @@ function StepRow({ step, idx, onRemove }: { step: any; idx: number; onRemove: ()
       {open && (
         <div className="px-3 pb-3 pt-2 border-t border-gray-200 grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <label className="text-xs text-gray-500 mb-1 block">Product</label>
+            <label className="text-xs text-gray-500 mb-1 block">Step type</label>
+            <select
+              value={step.step_type}
+              onChange={e => set("step_type", e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            >
+              {(Object.keys(STEP_TYPE_META) as StepType[]).map(t => (
+                <option key={t} value={t}>{STEP_TYPE_META[t].label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="col-span-2">
+            <label className="text-xs text-gray-500 mb-1 block">Product title</label>
             <div className="relative">
               <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-              <input className="w-full text-sm border border-gray-200 rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Search Shopify products…" />
+              <input
+                value={step.product_title}
+                onChange={e => set("product_title", e.target.value)}
+                className="w-full text-sm border border-gray-200 rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                placeholder="Product title…"
+              />
             </div>
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Discount %</label>
-            <input type="number" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="20" />
+            <input
+              type="number"
+              value={step.discount_pct}
+              onChange={e => set("discount_pct", e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              placeholder="20"
+            />
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Headline</label>
-            <input className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Wait! Add this to your order…" />
+            <input
+              value={step.headline}
+              onChange={e => set("headline", e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              placeholder="Wait! Add this to your order…"
+            />
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Sub-headline</label>
-            <input className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="One-time offer, expires now." />
+            <input
+              value={step.subheadline}
+              onChange={e => set("subheadline", e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              placeholder="One-time offer, expires now."
+            />
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Accept button text</label>
-            <input className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Yes, add to my order!" />
+            <input
+              value={step.button_text}
+              onChange={e => set("button_text", e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              placeholder="Yes, add to my order!"
+            />
           </div>
           <div className="col-span-2">
             <label className="text-xs text-gray-500 mb-1 block">Decline link text</label>
-            <input className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="No thanks, I'll skip this." />
+            <input
+              value={step.decline_text}
+              onChange={e => set("decline_text", e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              placeholder="No thanks, I'll skip this."
+            />
           </div>
         </div>
       )}
@@ -87,15 +144,55 @@ function StepRow({ step, idx, onRemove }: { step: any; idx: number; onRemove: ()
 }
 
 /* ─── Funnel Builder Modal ──────────────────────── */
-function NewFunnelModal({ onClose }: { onClose: () => void }) {
-  const [steps, setSteps] = useState<any[]>([
-    { id: 1, type: "upsell" },
-    { id: 2, type: "downsell" },
-  ]);
-  const [aiMode, setAiMode] = useState(false);
+const TRIGGER_OPTIONS = ["All orders", "Specific product/tag", "Order value > X"] as const;
+const PLACEMENT_OPTIONS = ["Post-purchase", "Thank-you page", "Checkout"] as const;
+
+function makeStep(step_type: StepType = "upsell"): StepData {
+  return { id: Date.now() + Math.random(), step_type, product_title: "", product_id: "", discount_pct: "", headline: "", subheadline: "", button_text: "", decline_text: "" };
+}
+
+function NewFunnelModal({ brandId, onClose, onCreated }: { brandId: string; onClose: () => void; onCreated: (f: any) => void }) {
+  const [name, setName] = useState("");
+  const [trigger_type, setTriggerType] = useState("All orders");
+  const [trigger_value, setTriggerValue] = useState("");
+  const [ai_pick, setAiPick] = useState(false);
+  const [placement, setPlacement] = useState("Post-purchase");
+  const [steps, setSteps] = useState<StepData[]>([makeStep("upsell")]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const updateStep = (id: number, updated: StepData) =>
+    setSteps(ss => ss.map(s => s.id === id ? updated : s));
+
+  const addStep = (step_type: StepType) =>
+    setSteps(ss => [...ss, makeStep(step_type)]);
+
+  const removeStep = (id: number) =>
+    setSteps(ss => ss.filter(s => s.id !== id));
+
+  const handleSubmit = async () => {
+    if (!name.trim()) { setError("Funnel name is required."); return; }
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/pp-funnels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandId, name, trigger_type, trigger_value, ai_pick, placement, steps }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      onCreated(data);
+      onClose();
+    } catch (e: any) {
+      setError(e.message ?? "Failed to create funnel.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="font-semibold text-gray-900">New Funnel</h2>
@@ -106,25 +203,46 @@ function NewFunnelModal({ onClose }: { onClose: () => void }) {
           {/* Name */}
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Funnel name</label>
-            <input className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="e.g. High-AOV Upsell" />
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              placeholder="e.g. High-AOV Upsell"
+            />
           </div>
 
           {/* Trigger */}
           <div>
             <label className="text-xs text-gray-500 mb-2 block">Trigger</label>
             <div className="grid grid-cols-3 gap-2">
-              {["All orders", "Specific product/tag", "Order value > X"].map(t => (
-                <button key={t} className="py-2 px-3 rounded-xl border border-gray-200 text-xs text-gray-600 hover:border-indigo-400 hover:text-indigo-700 hover:bg-indigo-50 transition text-left">{t}</button>
+              {TRIGGER_OPTIONS.map(t => (
+                <button
+                  key={t}
+                  onClick={() => setTriggerType(t)}
+                  className={`py-2 px-3 rounded-xl border text-xs transition text-left ${trigger_type === t ? "border-indigo-400 text-indigo-700 bg-indigo-50" : "border-gray-200 text-gray-600 hover:border-indigo-400 hover:text-indigo-700 hover:bg-indigo-50"}`}
+                >{t}</button>
               ))}
             </div>
+            {trigger_type !== "All orders" && (
+              <input
+                value={trigger_value}
+                onChange={e => setTriggerValue(e.target.value)}
+                className="mt-2 w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                placeholder={trigger_type === "Specific product/tag" ? "product handle or tag…" : "minimum order value…"}
+              />
+            )}
           </div>
 
           {/* Placement */}
           <div>
             <label className="text-xs text-gray-500 mb-2 block">Placement</label>
             <div className="grid grid-cols-3 gap-2">
-              {["Post-purchase", "Thank-you page", "Checkout"].map(p => (
-                <button key={p} className="py-2 px-3 rounded-xl border border-gray-200 text-xs text-gray-600 hover:border-indigo-400 hover:text-indigo-700 hover:bg-indigo-50 transition">{p}</button>
+              {PLACEMENT_OPTIONS.map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPlacement(p)}
+                  className={`py-2 px-3 rounded-xl border text-xs transition ${placement === p ? "border-indigo-400 text-indigo-700 bg-indigo-50" : "border-gray-200 text-gray-600 hover:border-indigo-400 hover:text-indigo-700 hover:bg-indigo-50"}`}
+                >{p}</button>
               ))}
             </div>
           </div>
@@ -136,13 +254,13 @@ function NewFunnelModal({ onClose }: { onClose: () => void }) {
               <div className="text-xs text-gray-500">AI selects the best upsell based on cart content</div>
             </div>
             <label className="relative inline-flex cursor-pointer items-center">
-              <input type="checkbox" checked={aiMode} onChange={e => setAiMode(e.target.checked)} className="peer sr-only" />
+              <input type="checkbox" checked={ai_pick} onChange={e => setAiPick(e.target.checked)} className="peer sr-only" />
               <div className="peer h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition peer-checked:bg-indigo-500 peer-checked:after:translate-x-4" />
             </label>
           </div>
 
           {/* Steps */}
-          {!aiMode && (
+          {!ai_pick && (
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-gray-700">Steps</span>
@@ -150,7 +268,7 @@ function NewFunnelModal({ onClose }: { onClose: () => void }) {
                   {(Object.keys(STEP_TYPE_META) as StepType[]).map(t => (
                     <button
                       key={t}
-                      onClick={() => setSteps(ss => [...ss, { id: Date.now(), type: t }])}
+                      onClick={() => addStep(t)}
                       className="text-[11px] px-2 py-1 rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition"
                     >
                       + {STEP_TYPE_META[t].label}
@@ -160,16 +278,27 @@ function NewFunnelModal({ onClose }: { onClose: () => void }) {
               </div>
               <div className="space-y-2">
                 {steps.map((s, i) => (
-                  <StepRow key={s.id} step={s} idx={i} onRemove={() => setSteps(ss => ss.filter(x => x.id !== s.id))} />
+                  <StepRow key={s.id} step={s} idx={i} onChange={updated => updateStep(s.id, updated)} onRemove={() => removeStep(s.id)} />
                 ))}
+                {steps.length === 0 && (
+                  <div className="text-center py-4 text-xs text-gray-400">No steps yet — add one above.</div>
+                )}
               </div>
             </div>
           )}
+
+          {error && <p className="text-xs text-red-500">{error}</p>}
         </div>
 
         <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
-          <button className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition">Activate Funnel</button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving}
+            className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-60"
+          >
+            {saving ? "Saving…" : "Activate Funnel"}
+          </button>
         </div>
       </div>
     </div>
@@ -177,15 +306,51 @@ function NewFunnelModal({ onClose }: { onClose: () => void }) {
 }
 
 /* ─── Funnels Tab ───────────────────────────────── */
-function FunnelsTab({ funnels, conversions }: { funnels: any[]; conversions: any[] }) {
+function FunnelsTab({ brandId, funnels: initialFunnels, conversions }: { brandId: string; funnels: any[]; conversions: any[] }) {
   const [showModal, setShowModal] = useState(false);
+  const [funnels, setFunnels] = useState(initialFunnels);
   const [active, setActive] = useState<Record<string, boolean>>(
-    Object.fromEntries(funnels.map(f => [f.id, f.is_active]))
+    Object.fromEntries(initialFunnels.map(f => [f.id, f.is_active]))
   );
+
+  const handleToggle = async (funnelId: string) => {
+    const newVal = !active[funnelId];
+    setActive(a => ({ ...a, [funnelId]: newVal }));
+    try {
+      await fetch("/api/pp-funnels", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ funnelId, is_active: newVal }),
+      });
+    } catch {
+      // revert on error
+      setActive(a => ({ ...a, [funnelId]: !newVal }));
+    }
+  };
+
+  const handleDelete = async (funnelId: string) => {
+    if (!confirm("Delete this funnel?")) return;
+    setFunnels(fs => fs.filter(f => f.id !== funnelId));
+    try {
+      await fetch("/api/pp-funnels", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ funnelId }),
+      });
+    } catch {
+      // optimistic — leave deleted from UI
+    }
+  };
 
   return (
     <div className="space-y-4">
-      {showModal && <NewFunnelModal onClose={() => setShowModal(false)} />}
+      {showModal && (
+        <NewFunnelModal
+          brandId={brandId}
+          onClose={() => setShowModal(false)}
+          onCreated={f => setFunnels(fs => [f, ...fs])}
+        />
+      )}
       <div className="flex justify-end">
         <button onClick={() => setShowModal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition">
           <Plus className="w-4 h-4" /> New Funnel
@@ -218,7 +383,7 @@ function FunnelsTab({ funnels, conversions }: { funnels: any[]; conversions: any
                     <div className="text-gray-400">{rate}% accept</div>
                   </div>
                   <button
-                    onClick={() => setActive(a => ({ ...a, [funnel.id]: !a[funnel.id] }))}
+                    onClick={() => handleToggle(funnel.id)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition flex-shrink-0 ${active[funnel.id] ? "border-amber-200 bg-amber-50 text-amber-700" : "border-green-200 bg-green-50 text-green-700"}`}
                   >
                     {active[funnel.id] ? <><Pause className="w-3 h-3 inline mr-1" />Pause</> : <><Play className="w-3 h-3 inline mr-1" />Activate</>}
@@ -226,7 +391,7 @@ function FunnelsTab({ funnels, conversions }: { funnels: any[]; conversions: any
                   <div className="flex gap-1">
                     <button className="p-1.5 text-gray-400 hover:text-indigo-500 rounded hover:bg-indigo-50 transition"><Settings2 className="w-4 h-4" /></button>
                     <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition"><Copy className="w-4 h-4" /></button>
-                    <button className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(funnel.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
 
@@ -468,7 +633,7 @@ export default function PPClient({ brandId, funnels, conversions }: Props) {
         ))}
       </div>
 
-      {tab === "Funnels" && <FunnelsTab funnels={funnels} conversions={conversions} />}
+      {tab === "Funnels" && <FunnelsTab brandId={brandId} funnels={funnels} conversions={conversions} />}
       {tab === "Analytics" && <PPAnalyticsTab funnels={funnels} conversions={conversions} />}
       {tab === "Settings" && <PPSettingsTab />}
     </div>

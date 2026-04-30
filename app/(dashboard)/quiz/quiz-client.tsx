@@ -98,15 +98,38 @@ function OverviewTab({ quizzes, responses }: { quizzes: any[]; responses: any[] 
 }
 
 /* ─── Question Builder ──────────────────────────── */
-function QuestionRow({ q, idx, onRemove }: { q: any; idx: number; onRemove: () => void }) {
+interface QuestionData {
+  id: number;
+  question_type: string;
+  question_text: string;
+  options: { id: number; text: string }[];
+}
+
+function makeQuestion(question_type = "single"): QuestionData {
+  return { id: Date.now() + Math.random(), question_type, question_text: "", options: [{ id: Date.now(), text: "" }] };
+}
+
+function QuestionRow({ q, idx, onChange, onRemove }: { q: QuestionData; idx: number; onChange: (updated: QuestionData) => void; onRemove: () => void }) {
   const [open, setOpen] = useState(false);
+
+  const setField = (field: keyof QuestionData, value: any) => onChange({ ...q, [field]: value });
+
+  const updateOption = (optId: number, text: string) =>
+    setField("options", q.options.map(o => o.id === optId ? { ...o, text } : o));
+
+  const addOption = () =>
+    setField("options", [...q.options, { id: Date.now(), text: "" }]);
+
+  const removeOption = (optId: number) =>
+    setField("options", q.options.filter(o => o.id !== optId));
+
   return (
     <div className="border border-gray-200 rounded-xl bg-gray-50">
       <div className="flex items-center gap-2 px-3 py-2.5 cursor-pointer" onClick={() => setOpen(o => !o)}>
         <GripVertical className="w-4 h-4 text-gray-300 flex-shrink-0" />
         <span className="text-xs font-medium text-indigo-600 w-5">Q{idx + 1}</span>
-        <span className="text-sm text-gray-800 flex-1 truncate">{q.text || "New question"}</span>
-        <Badge label={q.type} />
+        <span className="text-sm text-gray-800 flex-1 truncate">{q.question_text || "New question"}</span>
+        <Badge label={q.question_type} />
         <ChevronDown className={`w-4 h-4 text-gray-400 transition ${open ? "rotate-180" : ""}`} />
         <button onClick={e => { e.stopPropagation(); onRemove(); }} className="p-1 hover:text-red-500 text-gray-400">
           <Trash2 className="w-3.5 h-3.5" />
@@ -114,22 +137,33 @@ function QuestionRow({ q, idx, onRemove }: { q: any; idx: number; onRemove: () =
       </div>
       {open && (
         <div className="px-3 pb-3 space-y-2 border-t border-gray-200 pt-2">
-          <input className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Question text" defaultValue={q.text} />
-          <input className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Image URL (optional)" />
-          {(q.type === "single" || q.type === "multi") && (
+          <input
+            value={q.question_text}
+            onChange={e => setField("question_text", e.target.value)}
+            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            placeholder="Question text"
+          />
+          <select
+            value={q.question_type}
+            onChange={e => setField("question_type", e.target.value)}
+            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          >
+            {QUESTION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          {(q.question_type === "single" || q.question_type === "multi") && (
             <div className="space-y-1">
-              {["Option A", "Option B", "Option C"].map((opt, i) => (
-                <div key={i} className="flex gap-1.5">
-                  <input className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-300" defaultValue={opt} />
-                  <select className="text-xs border border-gray-200 rounded-lg px-2 text-gray-500">
-                    <option>No jump</option>
-                    <option>→ Q2</option>
-                    <option>→ Q3</option>
-                    <option>→ Results</option>
-                  </select>
+              {q.options.map(opt => (
+                <div key={opt.id} className="flex gap-1.5">
+                  <input
+                    value={opt.text}
+                    onChange={e => updateOption(opt.id, e.target.value)}
+                    className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    placeholder="Option text…"
+                  />
+                  <button onClick={() => removeOption(opt.id)} className="p-1 text-gray-400 hover:text-red-500"><Trash2 className="w-3 h-3" /></button>
                 </div>
               ))}
-              <button className="text-xs text-indigo-500 hover:text-indigo-700">+ Add option</button>
+              <button onClick={addOption} className="text-xs text-indigo-500 hover:text-indigo-700">+ Add option</button>
             </div>
           )}
         </div>
@@ -139,49 +173,95 @@ function QuestionRow({ q, idx, onRemove }: { q: any; idx: number; onRemove: () =
 }
 
 /* ─── Quiz Builder Tab ──────────────────────────── */
-function QuizBuilderTab({ quizzes, responses }: { quizzes: any[]; responses: any[] }) {
+function QuizBuilderTab({ brandId, quizzes: initialQuizzes, responses }: { brandId: string; quizzes: any[]; responses: any[] }) {
   const [building, setBuilding] = useState(false);
-  const [questions, setQuestions] = useState<any[]>([
-    { id: 1, type: "single", text: "What's your skin type?" },
-    { id: 2, type: "multi", text: "What are your skincare goals?" },
-  ]);
+  const [quizzes, setQuizzes] = useState(initialQuizzes);
 
-  const embedCode = (id: string) =>
-    `<script src="https://cdn.yourapp.com/quiz.js" data-quiz-id="${id}"></script>`;
+  // Form state
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [email_gate, setEmailGate] = useState(true);
+  const [questions, setQuestions] = useState<QuestionData[]>([makeQuestion("single")]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [savedQuizId, setSavedQuizId] = useState<string | null>(null);
+
+  const embedCode = (id: string) => `<script src="/quiz.js" data-quiz="${id}"></script>`;
+
+  const updateQuestion = (id: number, updated: QuestionData) =>
+    setQuestions(qs => qs.map(q => q.id === id ? updated : q));
+
+  const removeQuestion = (id: number) =>
+    setQuestions(qs => qs.filter(q => q.id !== id));
+
+  const addQuestion = (question_type: string) =>
+    setQuestions(qs => [...qs, makeQuestion(question_type)]);
+
+  const resetForm = () => {
+    setTitle(""); setDescription(""); setEmailGate(true);
+    setQuestions([makeQuestion("single")]); setError(""); setSavedQuizId(null);
+  };
+
+  const handleSubmit = async () => {
+    if (!title.trim()) { setError("Quiz title is required."); return; }
+    setSaving(true); setError("");
+    try {
+      const res = await fetch("/api/quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandId, title, description, email_gate, questions }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setQuizzes(qs => [data, ...qs]);
+      setSavedQuizId(data.id);
+    } catch (e: any) {
+      setError(e.message ?? "Failed to publish quiz.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggle = async (quizId: string, current: boolean) => {
+    setQuizzes(qs => qs.map(q => q.id === quizId ? { ...q, is_active: !current } : q));
+    try {
+      await fetch("/api/quiz", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quizId, is_active: !current }),
+      });
+    } catch {
+      setQuizzes(qs => qs.map(q => q.id === quizId ? { ...q, is_active: current } : q));
+    }
+  };
 
   if (building) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-gray-900">New Quiz</h2>
-          <button onClick={() => setBuilding(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+          <button onClick={() => { setBuilding(false); resetForm(); }} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
         </div>
 
         {/* Meta */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Quiz title</label>
-            <input className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="e.g. Find Your Perfect Routine" />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">CTA button text</label>
-            <input className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="See my results" />
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              placeholder="e.g. Find Your Perfect Routine"
+            />
           </div>
           <div className="col-span-2">
             <label className="text-xs text-gray-500 mb-1 block">Description</label>
-            <input className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Answer 5 quick questions…" />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Cover image URL</label>
-            <input className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="https://…" />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Result type</label>
-            <select className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
-              <option>Product recommendations</option>
-              <option>Score-based</option>
-              <option>Custom message</option>
-            </select>
+            <input
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              placeholder="Answer 5 quick questions…"
+            />
           </div>
         </div>
 
@@ -189,11 +269,11 @@ function QuizBuilderTab({ quizzes, responses }: { quizzes: any[]; responses: any
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-semibold text-gray-700">Questions</span>
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5 flex-wrap">
               {QUESTION_TYPES.map(t => (
                 <button
                   key={t}
-                  onClick={() => setQuestions(qs => [...qs, { id: Date.now(), type: t, text: "" }])}
+                  onClick={() => addQuestion(t)}
                   className="text-[11px] px-2 py-1 rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition"
                 >
                   + {t}
@@ -203,8 +283,17 @@ function QuizBuilderTab({ quizzes, responses }: { quizzes: any[]; responses: any
           </div>
           <div className="space-y-2">
             {questions.map((q, i) => (
-              <QuestionRow key={q.id} q={q} idx={i} onRemove={() => setQuestions(qs => qs.filter(x => x.id !== q.id))} />
+              <QuestionRow
+                key={q.id}
+                q={q}
+                idx={i}
+                onChange={updated => updateQuestion(q.id, updated)}
+                onRemove={() => removeQuestion(q.id)}
+              />
             ))}
+            {questions.length === 0 && (
+              <div className="text-center py-4 text-xs text-gray-400">No questions yet — add one above.</div>
+            )}
           </div>
         </div>
 
@@ -213,46 +302,48 @@ function QuizBuilderTab({ quizzes, responses }: { quizzes: any[]; responses: any
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-gray-700 flex items-center gap-1.5"><Mail className="w-4 h-4 text-indigo-500" /> Email gate</span>
             <label className="relative inline-flex cursor-pointer items-center">
-              <input type="checkbox" defaultChecked className="peer sr-only" />
+              <input type="checkbox" checked={email_gate} onChange={e => setEmailGate(e.target.checked)} className="peer sr-only" />
               <div className="peer h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition peer-checked:bg-indigo-500 peer-checked:after:translate-x-4" />
             </label>
           </div>
-          <select className="w-full text-sm border border-indigo-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
-            <option>Before results</option>
-            <option>As first question</option>
-          </select>
+          {email_gate && (
+            <select className="w-full text-sm border border-indigo-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+              <option>Before results</option>
+              <option>As first question</option>
+            </select>
+          )}
         </div>
 
-        {/* Product rules */}
-        <div>
-          <div className="text-sm font-semibold text-gray-700 mb-2">Product recommendation rules</div>
-          <div className="space-y-1.5">
-            {[{ tag: "oily", score: 3 }, { tag: "dry", score: 2 }].map(r => (
-              <div key={r.tag} className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                <span className="font-medium">If tag</span>
-                <span className="font-mono bg-white border border-gray-200 rounded px-1.5 py-0.5">{r.tag}</span>
-                <span>score &gt;</span>
-                <span className="font-mono bg-white border border-gray-200 rounded px-1.5 py-0.5">{r.score}</span>
-                <span className="text-gray-400">→ show collection</span>
-                <input className="flex-1 border-b border-dashed border-gray-300 bg-transparent focus:outline-none" placeholder="collection-handle" />
-              </div>
-            ))}
-            <button className="text-xs text-indigo-500 hover:text-indigo-700">+ Add rule</button>
+        {error && <p className="text-xs text-red-500">{error}</p>}
+
+        {/* Embed snippet — shown after successful save */}
+        {savedQuizId && (
+          <div>
+            <div className="text-xs text-green-600 font-semibold mb-1">Quiz published! Embed snippet:</div>
+            <div className="flex items-center gap-2 bg-gray-900 rounded-xl px-4 py-2.5">
+              <code className="text-xs text-green-400 flex-1 truncate">{embedCode(savedQuizId)}</code>
+              <CopyButton text={embedCode(savedQuizId)} />
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Embed */}
-        <div>
-          <div className="text-xs text-gray-500 mb-1">Embed snippet</div>
-          <div className="flex items-center gap-2 bg-gray-900 rounded-xl px-4 py-2.5">
-            <code className="text-xs text-green-400 flex-1 truncate">{embedCode("quiz_new")}</code>
-            <CopyButton text={embedCode("quiz_new")} />
-          </div>
+        <div className="flex gap-2 justify-end">
+          {savedQuizId && (
+            <button
+              onClick={() => { setBuilding(false); resetForm(); }}
+              className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50"
+            >
+              Done
+            </button>
+          )}
+          <button
+            onClick={handleSubmit}
+            disabled={saving}
+            className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-60"
+          >
+            {saving ? "Publishing…" : "Publish Quiz"}
+          </button>
         </div>
-
-        <button className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition">
-          Publish Quiz
-        </button>
       </div>
     );
   }
@@ -271,23 +362,26 @@ function QuizBuilderTab({ quizzes, responses }: { quizzes: any[]; responses: any
           {quizzes.map(quiz => {
             const qr = responses.filter(r => r.quiz_id === quiz.id);
             const emailRate = qr.length > 0 ? ((qr.filter(r => r.email).length / qr.length) * 100).toFixed(0) : "0";
+            const embed = embedCode(quiz.id);
             return (
               <div key={quiz.id} className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-gray-900 text-sm">{quiz.title}</div>
                     <div className="text-xs text-gray-500 mt-0.5">{quiz.quiz_questions?.length ?? 0} questions · {qr.length} responses · {emailRate}% email capture</div>
-                    {quiz.embed_url && (
-                      <div className="flex items-center gap-1 mt-1.5">
-                        <code className="text-[11px] text-gray-400 truncate max-w-xs">{quiz.embed_url}</code>
-                        <CopyButton text={quiz.embed_url} />
-                        <a href={quiz.embed_url} target="_blank" rel="noreferrer" className="p-1 text-gray-400 hover:text-indigo-500"><ExternalLink className="w-3 h-3" /></a>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1 mt-1.5">
+                      <code className="text-[11px] text-gray-400 truncate max-w-xs">{embed}</code>
+                      <CopyButton text={embed} />
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge label={quiz.is_active ? "active" : "draft"} color={quiz.is_active ? "green" : "yellow"} />
-                    <button className="text-xs text-indigo-500 hover:underline">Edit</button>
+                    <button
+                      onClick={() => handleToggle(quiz.id, quiz.is_active)}
+                      className="text-xs text-indigo-500 hover:underline"
+                    >
+                      {quiz.is_active ? "Deactivate" : "Activate"}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -527,7 +621,7 @@ export default function QuizClient({ brandId, quizzes, responses }: Props) {
       </div>
 
       {tab === "Overview" && <OverviewTab quizzes={quizzes} responses={responses} />}
-      {tab === "Quiz Builder" && <QuizBuilderTab quizzes={quizzes} responses={responses} />}
+      {tab === "Quiz Builder" && <QuizBuilderTab brandId={brandId} quizzes={quizzes} responses={responses} />}
       {tab === "Analytics" && <AnalyticsTab quizzes={quizzes} responses={responses} />}
       {tab === "Integrations" && <IntegrationsTab />}
     </div>

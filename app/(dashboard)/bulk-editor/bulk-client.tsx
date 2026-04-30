@@ -155,6 +155,27 @@ function ImportTab({ brandId, runningJob }: { brandId: string; runningJob: any }
 
   return (
     <div className="space-y-5 max-w-3xl">
+      {/* How-to info box */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 mb-4">
+        <div className="text-2xl">💡</div>
+        <div>
+          <div className="font-semibold text-amber-800 text-sm mb-1">How to bulk edit with Claude</div>
+          <div className="text-amber-700 text-xs leading-relaxed">
+            Download your products CSV from Shopify Admin → Products → Export.
+            Then open a new Claude conversation, upload the CSV, and describe
+            what you want changed — e.g. "increase all prices by 15%" or
+            "add 'Sale' to all product titles in the Summer collection".
+            Claude will return a modified CSV. Upload it here with mode: <strong>MERGE</strong>.
+          </div>
+          <div className="mt-2 flex gap-2">
+            <a href="https://admin.shopify.com/products" target="_blank" rel="noreferrer"
+               className="text-xs text-amber-700 underline font-medium">Open Shopify Admin →</a>
+            <a href="https://claude.ai" target="_blank" rel="noreferrer"
+               className="text-xs text-amber-700 underline font-medium">Open Claude →</a>
+          </div>
+        </div>
+      </div>
+
       {/* Source selector */}
       <div className="card space-y-4">
         <h3 className="font-semibold text-ink flex items-center gap-2"><Upload className="w-4 h-4 text-primary" /> Data Source</h3>

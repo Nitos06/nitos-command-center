@@ -736,6 +736,9 @@ function SettingsTab({ brandId }: { brandId: string }) {
     fraud_threshold: "30",
   });
   const [saved, setSaved] = useState(false);
+  const [widgetCopied, setWidgetCopied] = useState(false);
+  const [payoutSchedule, setPayoutSchedule] = useState("1st");
+  const embedCode = `<iframe src="https://YOUR_APP_URL/affiliate-portal?brand=BRAND_ID" width="100%" height="600px" frameborder="0"></iframe>`;
 
   async function save() {
     await fetch(`/api/affiliates/${brandId}`, {
@@ -745,6 +748,12 @@ function SettingsTab({ brandId }: { brandId: string }) {
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  }
+
+  function copyEmbed() {
+    navigator.clipboard.writeText(embedCode);
+    setWidgetCopied(true);
+    setTimeout(() => setWidgetCopied(false), 2000);
   }
 
   return (
@@ -787,6 +796,70 @@ function SettingsTab({ brandId }: { brandId: string }) {
           <label className="label">Fraud Score Threshold (0–100)</label>
           <input className="input" type="number" min="0" max="100" value={settings.fraud_threshold} onChange={e => setSettings(s => ({ ...s, fraud_threshold: e.target.value }))} />
           <p className="text-xs text-ink-muted mt-1">Affiliates above this score are flagged in the Fraud tab.</p>
+        </div>
+      </div>
+
+      {/* Affiliate Portal Widget */}
+      <div className="card space-y-4">
+        <div>
+          <h3 className="font-semibold text-ink">Affiliate Portal Widget</h3>
+          <p className="text-xs text-ink-muted mt-1">Embed a self-service portal where affiliates can see their stats, referral links, and payouts</p>
+        </div>
+        <div>
+          <label className="label">Embed Code</label>
+          <div className="relative">
+            <textarea
+              readOnly
+              className="input resize-none font-mono text-[11px] pr-20"
+              rows={3}
+              value={embedCode}
+            />
+            <button
+              onClick={copyEmbed}
+              className="absolute top-2 right-2 btn-outline text-xs py-1 px-2 gap-1 flex items-center"
+            >
+              <Copy className="w-3 h-3" />
+              {widgetCopied ? "Copied!" : "Copy"}
+            </button>
+          </div>
+          <p className="text-xs text-ink-muted mt-1.5">Replace <code className="bg-surface-tint px-1 rounded">YOUR_APP_URL</code> with your app domain and <code className="bg-surface-tint px-1 rounded">BRAND_ID</code> with your brand ID</p>
+        </div>
+      </div>
+
+      {/* Payout Automation */}
+      <div className="card space-y-4">
+        <div>
+          <h3 className="font-semibold text-ink">Automatic Payouts</h3>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="badge-neutral text-xs px-2 py-0.5">Manual</span>
+          <p className="text-xs text-ink-muted">Payouts are currently manual. Click "Mark as Paid" in the Payouts tab after sending money via PayPal or bank transfer.</p>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-medium text-ink">Enable PayPal Auto-payout</div>
+            <div className="text-xs text-ink-muted">Connect PayPal API credentials in Settings → Integrations to enable automatic monthly payouts</div>
+          </div>
+          <button disabled title="Connect PayPal API credentials in Settings → Integrations to enable automatic monthly payouts" className="opacity-40 cursor-not-allowed">
+            <ToggleLeft className="w-8 h-8 text-ink-muted" />
+          </button>
+        </div>
+
+        <div>
+          <label className="label">Monthly Payout Schedule</label>
+          <select
+            className="input"
+            value={payoutSchedule}
+            onChange={e => setPayoutSchedule(e.target.value)}
+            disabled
+          >
+            <option value="1st">1st of month</option>
+            <option value="15th">15th of month</option>
+            <option value="request">On request</option>
+          </select>
+          <p className="text-xs text-ink-muted mt-1">Schedule applies once PayPal auto-payout is enabled.</p>
         </div>
       </div>
 

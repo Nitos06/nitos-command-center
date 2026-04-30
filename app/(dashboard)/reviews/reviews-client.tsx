@@ -795,7 +795,7 @@ const TABS = [
 
 type TabId = typeof TABS[number]["id"];
 
-export function ReviewsClient({ brandId, reviews, pending, qa, imports, ugcAssets, requestSettings }: Props) {
+export default function ReviewsClient({ brandId, reviews, pending, qa, imports, ugcAssets, requestSettings }: Props) {
   const [tab, setTab] = useState<TabId>("reviews");
 
   return (
