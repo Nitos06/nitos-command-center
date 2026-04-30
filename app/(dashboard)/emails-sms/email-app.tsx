@@ -8,8 +8,9 @@ import {
   TrendingUp, TrendingDown, Copy, CheckCircle2, AlertCircle,
   MoreHorizontal, Eye, MousePointerClick, Ban, AlertTriangle,
   RefreshCw, Minus, ArrowUpRight, Upload, Trash2, Edit2,
-  Calendar, BarChart, Activity, Globe, Inbox, XCircle, Info,
+  Calendar, BarChart, Activity, Globe, Inbox, XCircle, Info, Code2,
 } from "lucide-react";
+import { MjmlDesigner } from "./mjml-designer";
 import {
   LineChart, Line, AreaChart, Area, BarChart as RBarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -131,6 +132,7 @@ function statusBadge(status: string) {
 const MAIN_TABS = [
   { key: "campaigns",         label: "Campaigns",         icon: Mail },
   { key: "stats",             label: "Stats",             icon: BarChart2 },
+  { key: "designer",          label: "Email Designer",    icon: Code2 },
   { key: "forms",             label: "Forms",             icon: FileText },
   { key: "contact-lists",     label: "Contact Lists",     icon: Users },
   { key: "segmentation",      label: "Segmentation",      icon: Layers },
@@ -1281,6 +1283,7 @@ export function EmailApp({
       {/* Tab content */}
       <div>
         {tab === "campaigns"     && <CampaignsTab campaigns={campaigns} brandId={brandId} />}
+        {tab === "designer"      && <MjmlDesigner brandId={brandId} />}
         {tab === "stats"         && <StatsTab chartData={chartData} stats={stats} />}
         {tab === "forms"         && <FormsTab brandId={brandId} />}
         {tab === "contact-lists" && <ContactListsTab contacts={contacts} brandId={brandId} />}

@@ -1,20 +1,25 @@
-import { PageHeader, EmptyState } from "@/components/page-header";
-import { PenLine } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { createBrandedClient } from "@/lib/supabase/branded-query";
+import BulkClient from "./bulk-client";
 
-export default function BulkEditorPage() {
+export default async function BulkEditorPage() {
+  const { supabase, brandId } = await createBrandedClient();
+  const eq = (q: any) => (brandId ? q.eq("brand_id", brandId) : q);
+
+  const { data: jobs } = await eq(
+    supabase.from("bulk_jobs").select("*")
+  ).order("created_at", { ascending: false }).limit(50);
+
   return (
     <>
       <PageHeader
         title="Bulk Editor"
-        subtitle="Edit prices, titles, tags, and inventory across all products at once"
+        subtitle="Import & export any Shopify entity — Matrixify replacement"
       />
-      <div className="card">
-        <EmptyState
-          icon={PenLine}
-          title="Bulk editor coming soon"
-          hint="Live spreadsheet-style editor for all your Shopify products. Inline edit prices, compare-at prices, titles, descriptions, tags, and inventory. Save changes write directly to Shopify via Admin API."
-        />
-      </div>
+      <BulkClient
+        brandId={brandId ?? ""}
+        jobs={jobs ?? []}
+      />
     </>
   );
 }
