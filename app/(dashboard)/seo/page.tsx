@@ -54,19 +54,6 @@ export default async function SeoPage() {
   const missingAlt = seoPages?.filter((p: any) => (p.missing_alt_count ?? 0) > 0) ?? [];
   const totalMissingAlt = missingAlt.reduce((s: number, p: any) => s + (p.missing_alt_count ?? 0), 0);
 
-  const scoreColor = (score: number | null | undefined) => {
-    if (!score) return "text-ink-muted";
-    if (score >= 75) return "text-green-600";
-    if (score >= 50) return "text-amber-500";
-    return "text-red-500";
-  };
-
-  const gaugeColor = (score: number) =>
-    score >= 75 ? "#22c55e" : score >= 50 ? "#f59e0b" : "#ef4444";
-
-  const scoreBarColor = (score: number) =>
-    score >= 75 ? "bg-green-500" : score >= 50 ? "bg-amber-400" : "bg-red-400";
-
   return (
     <>
       <div className="flex items-start justify-between mb-6">
@@ -96,9 +83,6 @@ export default async function SeoPage() {
       <SeoTabs
         brandId={brandId}
         healthScore={healthScore}
-        gaugeColor={gaugeColor}
-        scoreColor={scoreColor}
-        scoreBarColor={scoreBarColor}
         errors={errors}
         warnings={warnings}
         notices={notices}

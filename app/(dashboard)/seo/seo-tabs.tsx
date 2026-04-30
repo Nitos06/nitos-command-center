@@ -10,12 +10,20 @@ import { ApplyFixButton } from "./fix-request";
 const TABS = ["Site Audit", "Fixes", "Improvements", "Agent Log", "Blog Posts"] as const;
 type Tab = typeof TABS[number];
 
+const gaugeColor = (score: number) =>
+  score >= 75 ? "#22c55e" : score >= 50 ? "#f59e0b" : "#ef4444";
+const scoreColor = (score: number | null | undefined) => {
+  if (!score) return "text-gray-400";
+  if (score >= 75) return "text-green-600";
+  if (score >= 50) return "text-amber-500";
+  return "text-red-500";
+};
+const scoreBarColor = (score: number) =>
+  score >= 75 ? "bg-green-500" : score >= 50 ? "bg-amber-400" : "bg-red-400";
+
 interface Props {
   brandId: string | null;
   healthScore: number | null;
-  gaugeColor: (s: number) => string;
-  scoreColor: (s: number | null | undefined) => string;
-  scoreBarColor: (s: number) => string;
   errors: any[];
   warnings: any[];
   notices: any[];
@@ -72,7 +80,7 @@ function fixStatusBadge(s: string) {
 
 // ─── Site Audit Tab ───────────────────────────────────────────────────────────
 
-function SiteAuditTab({ healthScore, gaugeColor, scoreColor, scoreBarColor, errors, warnings, notices, fixes, issuesByCategory, latest, allAudits, brandId }: any) {
+function SiteAuditTab({ healthScore, errors, warnings, notices, fixes, issuesByCategory, latest, allAudits, brandId }: any) {
   return (
     <div className="space-y-6">
       {/* Health + breakdown */}
@@ -640,9 +648,6 @@ export default function SeoTabs(props: Props) {
       {tab === "Site Audit" && (
         <SiteAuditTab
           healthScore={props.healthScore}
-          gaugeColor={props.gaugeColor}
-          scoreColor={props.scoreColor}
-          scoreBarColor={props.scoreBarColor}
           errors={props.errors}
           warnings={props.warnings}
           notices={props.notices}
