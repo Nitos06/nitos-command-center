@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Upload, Loader2, CheckCircle2, Plus, Calculator, History, Building2, Settings2, Receipt, TrendingUp, AlertTriangle } from "lucide-react";
+import { Upload, Loader2, CheckCircle2, Plus, Calculator, History, Building2, Settings2, Receipt, TrendingUp, AlertTriangle, Megaphone, RefreshCw } from "lucide-react";
 import { formatMoney } from "@/lib/utils";
 
 /* ─── Types ─────────────────────────────────── */
@@ -343,6 +343,192 @@ function DepositHistory({ history }: { history: any[] }) {
   );
 }
 
+/* ── Meta Ads Connection Tab ─────────────────────── */
+function MetaAdsTab({ brandId }: { brandId: string }) {
+  const [form, setForm] = useState({
+    adAccountId: "",
+    accessToken: "",
+    pixelId: "",
+  });
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState<string | null>(null);
+  const [adSpendData, setAdSpendData] = useState<{ date: string; spend: number; impressions: number; clicks: number }[]>([]);
+
+  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await fetch("/api/taxes/meta-ads-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandId, ...form }),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {}
+    setSaving(false);
+  }
+
+  async function handleSync() {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/taxes/meta-ads-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandId }),
+      });
+      const data = await res.json();
+      if (data.rows) setAdSpendData(data.rows);
+      setLastSync(new Date().toLocaleString());
+    } catch {}
+    setSyncing(false);
+  }
+
+  const totalSpend = adSpendData.reduce((s, r) => s + r.spend, 0);
+  const totalImpressions = adSpendData.reduce((s, r) => s + r.impressions, 0);
+  const totalClicks = adSpendData.reduce((s, r) => s + r.clicks, 0);
+
+  return (
+    <div className="space-y-5">
+      {/* Connection card */}
+      <div className="card space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center">
+            <Megaphone className="w-4.5 h-4.5 text-blue-400" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-ink">Meta Ads Connection</div>
+            <div className="text-xs text-ink-muted">Connect your Meta Ads account to automatically pull ad spend into your tax expenses and P&L.</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="text-[10px] text-ink-muted uppercase tracking-wider block mb-1">Ad Account ID</label>
+            <input
+              value={form.adAccountId}
+              onChange={e => set("adAccountId", e.target.value)}
+              placeholder="act_123456789"
+              className="w-full px-3 py-2 rounded-lg bg-surface-tint border border-surface-border text-xs text-ink focus:outline-none focus:ring-1 focus:ring-primary-400 font-mono"
+            />
+            <p className="text-[10px] text-ink-subtle mt-1">Find in Meta Business Manager → Accounts → Ad Accounts</p>
+          </div>
+          <div>
+            <label className="text-[10px] text-ink-muted uppercase tracking-wider block mb-1">Pixel ID</label>
+            <input
+              value={form.pixelId}
+              onChange={e => set("pixelId", e.target.value)}
+              placeholder="123456789012345"
+              className="w-full px-3 py-2 rounded-lg bg-surface-tint border border-surface-border text-xs text-ink focus:outline-none focus:ring-1 focus:ring-primary-400 font-mono"
+            />
+            <p className="text-[10px] text-ink-subtle mt-1">Events Manager → your pixel → Settings</p>
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-[10px] text-ink-muted uppercase tracking-wider block mb-1">Access Token</label>
+            <input
+              value={form.accessToken}
+              onChange={e => set("accessToken", e.target.value)}
+              placeholder="EAAxxxxx…"
+              type="password"
+              className="w-full px-3 py-2 rounded-lg bg-surface-tint border border-surface-border text-xs text-ink focus:outline-none focus:ring-1 focus:ring-primary-400 font-mono"
+            />
+            <p className="text-[10px] text-ink-subtle mt-1">
+              <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener noreferrer" className="text-primary-400 hover:underline">Graph API Explorer</a>
+              {" → "}Generate token with ads_read, ads_management permissions
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSave}
+            disabled={saving || !form.adAccountId || !form.accessToken}
+            className="btn-primary text-xs px-4 py-2 disabled:opacity-50"
+          >
+            {saving ? "Saving…" : saved ? "✓ Saved" : "Save Connection"}
+          </button>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg border border-surface-border text-ink-muted hover:text-ink hover:border-primary-400/40 transition-colors disabled:opacity-50"
+          >
+            {syncing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            {syncing ? "Syncing…" : "Sync Ad Spend"}
+          </button>
+          {lastSync && <span className="text-[10px] text-ink-subtle">Last synced: {lastSync}</span>}
+        </div>
+      </div>
+
+      {/* How it works */}
+      <div className="card space-y-3">
+        <div className="text-xs font-semibold text-ink">How it works</div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {[
+            { icon: "🔗", title: "Connect", desc: "Paste your Ad Account ID and access token. Credentials are stored encrypted per brand." },
+            { icon: "📊", title: "Auto-sync", desc: "The agent pulls daily ad spend from Meta Marketing API and logs it as a business expense automatically." },
+            { icon: "🧾", title: "Tax ready", desc: "Ad spend appears in your Expenses tab categorized as 'Marketing' and feeds into your monthly P&L and VAT reports." },
+          ].map(s => (
+            <div key={s.title} className="flex gap-3">
+              <span className="text-xl">{s.icon}</span>
+              <div>
+                <div className="text-xs font-semibold text-ink mb-0.5">{s.title}</div>
+                <div className="text-[11px] text-ink-muted leading-relaxed">{s.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Ad spend data */}
+      {adSpendData.length > 0 && (
+        <div className="card space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-semibold text-ink">Recent Ad Spend</div>
+            <div className="flex gap-4 text-[11px] text-ink-muted">
+              <span>Total spend: <strong className="text-ink">${totalSpend.toFixed(2)}</strong></span>
+              <span>Impressions: <strong className="text-ink">{totalImpressions.toLocaleString()}</strong></span>
+              <span>Clicks: <strong className="text-ink">{totalClicks.toLocaleString()}</strong></span>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr className="border-b border-surface-border text-ink-muted">
+                  <th className="text-left py-1.5 pr-4 font-medium">Date</th>
+                  <th className="text-right py-1.5 pr-4 font-medium">Spend</th>
+                  <th className="text-right py-1.5 pr-4 font-medium">Impressions</th>
+                  <th className="text-right py-1.5 font-medium">Clicks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {adSpendData.slice(0, 14).map(row => (
+                  <tr key={row.date} className="border-b border-surface-border/50 hover:bg-surface-tint/50">
+                    <td className="py-1.5 pr-4 text-ink">{row.date}</td>
+                    <td className="py-1.5 pr-4 text-right font-medium text-ink">${row.spend.toFixed(2)}</td>
+                    <td className="py-1.5 pr-4 text-right text-ink-muted">{row.impressions.toLocaleString()}</td>
+                    <td className="py-1.5 text-right text-ink-muted">{row.clicks.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {adSpendData.length === 0 && (
+        <div className="card py-10 text-center">
+          <Megaphone className="w-10 h-10 mx-auto mb-3 text-ink-subtle opacity-40" />
+          <div className="text-sm font-medium text-ink-muted">No ad spend data yet</div>
+          <div className="text-xs text-ink-subtle mt-1">Connect your account above and click "Sync Ad Spend"</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Main export ───────────────────────────── */
 const TABS = [
   { id: "overview", label: "Overview", icon: TrendingUp },
@@ -351,6 +537,7 @@ const TABS = [
   { id: "entity", label: "Entity Type", icon: Calculator },
   { id: "fees", label: "Fees & Prices", icon: Settings2 },
   { id: "invoices", label: "Invoices", icon: Building2 },
+  { id: "meta_ads", label: "Meta Ads", icon: Megaphone },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
@@ -595,6 +782,9 @@ export function TaxesClient(props: TaxesClientProps) {
           {brandId ? <FeesConfig brandId={brandId} /> : <p className="text-sm text-ink-muted">Select a brand first.</p>}
         </div>
       )}
+
+      {/* ── META ADS ── */}
+      {tab === "meta_ads" && <MetaAdsTab brandId={brandId ?? ""} />}
 
       {/* ── INVOICES ── */}
       {tab === "invoices" && (

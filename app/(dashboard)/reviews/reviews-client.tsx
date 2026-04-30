@@ -628,6 +628,26 @@ function UGCTab({ ugcAssets, brandId }: { ugcAssets: any[]; brandId: string }) {
 
   return (
     <div className="space-y-4">
+      {/* Auto-pipeline status */}
+      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-4 flex items-start gap-4">
+        <div className="w-8 h-8 bg-indigo-500 rounded-xl flex items-center justify-center shrink-0">
+          <Zap className="w-4 h-4 text-white" />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-sm font-semibold text-indigo-900">Auto UGC Pipeline</span>
+            <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Active</span>
+          </div>
+          <p className="text-xs text-indigo-700 leading-relaxed">
+            When a customer submits a <strong>5-star review with a photo or video</strong>, it is automatically saved here as a UGC asset <em>and</em> their email is added to your Meta Custom Audience for lookalike targeting.
+          </p>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="text-xs text-indigo-500">Powered by</div>
+          <div className="text-[11px] font-bold text-indigo-700">Review Agent</div>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         {[
           { id: "all", label: "All" },
@@ -688,95 +708,237 @@ function UGCTab({ ugcAssets, brandId }: { ugcAssets: any[]; brandId: string }) {
   );
 }
 
-function WidgetsTab({ brandId }: { brandId: string }) {
-  const appUrl = typeof window !== "undefined" ? window.location.origin : "https://yourapp.com";
-  const shopifySnippet = `{% comment %} Reviews Widget — paste in theme.liquid before </body> {% endcomment %}
-<script src="${appUrl}/api/widgets/reviews.js?shop={{ shop.permanent_domain }}&brand=${brandId}" defer></script>`;
-  const richSnippet = `<script type="application/ld+json">
-{
-  "@context": "https://schema.org/",
-  "@type": "Product",
-  "name": "{{ product.title }}",
-  "aggregateRating": {
-    "@type": "AggregateRating",
-    "ratingValue": "{{ product.metafields.reviews.rating }}",
-    "reviewCount": "{{ product.metafields.reviews.count }}"
-  }
+// Widget Preview Components
+function CarouselPreview() {
+  return (
+    <div className="w-full max-w-[280px] bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+      <div className="text-[9px] text-gray-400 mb-2">Let customers speak for us</div>
+      <div className="flex items-center gap-0.5 mb-2">
+        {[...Array(5)].map((_, i) => <div key={i} className="w-2.5 h-2.5 bg-green-400 rounded-sm" />)}
+      </div>
+      <div className="flex gap-3 items-center">
+        <div className="w-3 h-3 rounded-full border border-gray-300 flex items-center justify-center"><span className="text-[6px]">‹</span></div>
+        <div className="flex-1 space-y-1">
+          <div className="flex gap-1">
+            <div className="flex-1 space-y-1">
+              <div className="flex gap-0.5">{[...Array(4)].map((_, i) => <div key={i} className="w-1.5 h-1.5 bg-green-300 rounded-sm" />)}</div>
+              <div className="h-1 bg-gray-200 rounded w-full" />
+              <div className="h-1 bg-gray-200 rounded w-4/5" />
+              <div className="h-1 bg-gray-200 rounded w-3/5" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <div className="flex gap-0.5">{[...Array(5)].map((_, i) => <div key={i} className="w-1.5 h-1.5 bg-green-300 rounded-sm" />)}</div>
+              <div className="h-1 bg-gray-200 rounded w-full" />
+              <div className="h-1 bg-gray-200 rounded w-4/5" />
+              <div className="h-1 bg-gray-200 rounded w-2/3" />
+            </div>
+          </div>
+        </div>
+        <div className="w-3 h-3 rounded-full border border-gray-300 flex items-center justify-center"><span className="text-[6px]">›</span></div>
+      </div>
+    </div>
+  );
 }
-</script>`;
+
+function StarBadgePreview() {
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className="bg-white rounded-xl border border-gray-200 px-4 py-2 shadow-sm flex items-center gap-2">
+        <div className="flex gap-0.5">{[...Array(5)].map((_, i) => <div key={i} className="w-3 h-3 bg-green-400 rounded-sm" />)}</div>
+        <span className="text-xs font-bold text-gray-700">4.9</span>
+        <span className="text-[10px] text-gray-400">(128)</span>
+      </div>
+      <div className="bg-white rounded-xl border border-gray-200 px-3 py-1.5 shadow-sm flex items-center gap-1.5">
+        <div className="flex gap-0.5">{[...Array(5)].map((_, i) => <div key={i} className="w-2 h-2 bg-green-400 rounded-sm" />)}</div>
+        <span className="text-[10px] text-gray-500">Write a review</span>
+      </div>
+    </div>
+  );
+}
+
+function GridPreview() {
+  return (
+    <div className="w-full max-w-[240px] grid grid-cols-2 gap-1.5">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="bg-white rounded-lg border border-gray-200 p-2 space-y-1">
+          <div className="flex gap-0.5">{[...Array(5)].map((_, j) => <div key={j} className="w-1.5 h-1.5 bg-green-400 rounded-sm" />)}</div>
+          <div className="h-1 bg-gray-200 rounded w-full" />
+          <div className="h-1 bg-gray-200 rounded w-3/4" />
+          {i % 2 === 0 && <div className="h-8 bg-gray-100 rounded-md" />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function UGCWallPreview() {
+  const colors = ["bg-rose-100", "bg-amber-100", "bg-indigo-100", "bg-green-100", "bg-purple-100", "bg-sky-100"];
+  return (
+    <div className="grid grid-cols-3 gap-1 w-full max-w-[200px]">
+      {colors.map((c, i) => (
+        <div key={i} className={`${c} rounded-lg aspect-square flex items-center justify-center`}>
+          <div className="w-4 h-4 bg-white/60 rounded" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TrustBarPreview() {
+  return (
+    <div className="w-full max-w-[280px] bg-gray-900 rounded-xl px-3 py-2 flex items-center gap-2 shadow-lg">
+      <div className="w-6 h-6 bg-gray-600 rounded-full shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="flex gap-0.5 mb-0.5">{[...Array(5)].map((_, i) => <div key={i} className="w-2 h-2 bg-green-400 rounded-sm" />)}</div>
+        <div className="h-1 bg-gray-600 rounded w-full" />
+      </div>
+      <div className="text-[8px] text-gray-500 shrink-0">just now</div>
+    </div>
+  );
+}
+
+function RequestPopupPreview() {
+  return (
+    <div className="w-full max-w-[220px] bg-white rounded-2xl border border-gray-200 shadow-lg p-3">
+      <div className="text-[10px] font-bold text-gray-800 mb-1 text-center">How was your experience?</div>
+      <div className="flex justify-center gap-1 mb-2">{[...Array(5)].map((_, i) => <div key={i} className="w-5 h-5 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center"><div className="w-2.5 h-2.5 bg-green-300 rounded-sm" /></div>)}</div>
+      <div className="h-8 bg-gray-50 border border-gray-200 rounded-lg mb-2" />
+      <div className="h-5 bg-indigo-500 rounded-lg" />
+    </div>
+  );
+}
+
+function WidgetsTab({ brandId }: { brandId: string }) {
+  const [openWidget, setOpenWidget] = useState<string | null>(null);
+  const [cfg, setCfg] = useState({ minRating: 4, count: 10, color: "#7C3AED", layout: "carousel" });
+  const appUrl = "https://nitaiecompro-nine.vercel.app";
 
   const WIDGETS = [
-    { id: "star_badge", label: "Star badge", desc: "Compact star rating for product cards" },
-    { id: "carousel", label: "Review carousel", desc: "Scrollable carousel of top reviews" },
-    { id: "full_block", label: "Full reviews block", desc: "Complete reviews section with filters" },
-    { id: "photo_gallery", label: "Photo gallery", desc: "Grid of customer photos" },
-    { id: "review_page", label: "Review page", desc: "Dedicated /reviews page embed" },
+    {
+      id: "carousel",
+      name: "Reviews Carousel (Classic)",
+      desc: "Showcase your best reviews in a carousel on any page of your choice.",
+      preview: <CarouselPreview />,
+    },
+    {
+      id: "star_badge",
+      name: "Star Rating Badge",
+      desc: "Compact star rating badge for product cards and collection pages.",
+      preview: <StarBadgePreview />,
+    },
+    {
+      id: "reviews_grid",
+      name: "Reviews Grid",
+      desc: "2-column masonry grid of customer reviews with photo support.",
+      preview: <GridPreview />,
+    },
+    {
+      id: "ugc_wall",
+      name: "UGC Photo Wall",
+      desc: "Instagram-style grid showcasing customer photos and videos.",
+      preview: <UGCWallPreview />,
+    },
+    {
+      id: "trust_bar",
+      name: "Floating Trust Bar",
+      desc: "Sticky bar at the bottom of the page showing your latest 5-star review.",
+      preview: <TrustBarPreview />,
+    },
+    {
+      id: "request_popup",
+      name: "Review Request Popup",
+      desc: "Time-delayed popup that asks satisfied visitors to share their experience.",
+      preview: <RequestPopupPreview />,
+    },
   ];
-
-  const [minRating, setMinRating] = useState(4);
-  const [numReviews, setNumReviews] = useState(10);
-  const [accentColor, setAccentColor] = useState("#7C3AED");
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="space-y-3">
-          <div className="text-xs font-semibold text-ink">Widget types</div>
-          {WIDGETS.map(w => {
-            const embedCode = `<div data-reviews-widget="${w.id}" data-brand="${brandId}" data-min-rating="${minRating}" data-count="${numReviews}" data-color="${accentColor}"></div>`;
-            return (
-              <div key={w.id} className="card p-3 space-y-2">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="text-xs font-medium text-ink">{w.label}</div>
-                    <div className="text-[11px] text-ink-muted">{w.desc}</div>
-                  </div>
-                  <Eye className="w-4 h-4 text-ink-muted" />
-                </div>
-                <div className="bg-surface-tint rounded-lg p-2 font-mono text-[10px] text-ink-muted break-all">{embedCode}</div>
-                <CopyButton text={embedCode} />
-              </div>
-            );
-          })}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-ink">Store Widgets</h3>
+          <p className="text-xs text-ink-muted mt-0.5">Install review widgets on your Shopify store. Copy the embed code or ask the agent to auto-inject.</p>
         </div>
-
-        <div className="space-y-4">
-          <div className="card space-y-3">
-            <div className="text-xs font-semibold text-ink">Widget customization</div>
-            <div>
-              <label className="text-[10px] text-ink-muted block mb-1">Min rating to show</label>
-              <div className="flex gap-1">
-                {[1,2,3,4,5].map(v => (
-                  <button key={v} onClick={() => setMinRating(v)} className={`flex-1 py-1 rounded-lg text-xs border font-medium transition-colors ${minRating === v ? "bg-primary-500/15 border-primary-500/30 text-primary-400" : "border-surface-border text-ink-muted"}`}>{v}★</button>
-                ))}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {WIDGETS.map(w => {
+          const embedCode = `<div data-reviews-widget="${w.id}" data-brand="${brandId}" data-min-rating="${cfg.minRating}" data-count="${cfg.count}" data-color="${cfg.color}"></div>\n<script src="${appUrl}/api/widgets/reviews.js" defer></script>`;
+          const isOpen = openWidget === w.id;
+          return (
+            <div key={w.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              {/* Preview area */}
+              <div className="h-40 bg-gray-50 border-b border-gray-100 flex items-center justify-center p-4">
+                {w.preview}
+              </div>
+              {/* Content */}
+              <div className="p-4">
+                <div className="font-semibold text-sm text-gray-900 mb-0.5">{w.name}</div>
+                <div className="text-xs text-gray-500 mb-3 leading-relaxed">{w.desc}</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setOpenWidget(isOpen ? null : w.id)}
+                    className="flex-1 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    {isOpen ? "Close" : "Customize"}
+                  </button>
+                  <CopyButton text={embedCode} />
+                  <button
+                    className="px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-medium cursor-not-allowed opacity-60"
+                    title="Agent can auto-inject into your Shopify theme"
+                    disabled
+                  >
+                    Auto-install
+                  </button>
+                </div>
+                {isOpen && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+                    <div>
+                      <label className="text-[10px] text-gray-500 mb-1 block">Min rating to show</label>
+                      <div className="flex gap-1">
+                        {[1,2,3,4,5].map(v => (
+                          <button key={v} onClick={() => setCfg(c => ({...c, minRating: v}))} className={`flex-1 py-1 rounded-lg text-xs border font-medium transition-colors ${cfg.minRating === v ? "bg-indigo-100 border-indigo-300 text-indigo-700" : "border-gray-200 text-gray-500 hover:border-indigo-200"}`}>{v}★</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="flex-1">
+                        <label className="text-[10px] text-gray-500 mb-1 block">Count</label>
+                        <input type="number" value={cfg.count} onChange={e => setCfg(c => ({...c, count: +e.target.value}))} min={1} max={50} className="w-full px-2 py-1 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      </div>
+                      <div className="flex-1">
+                        <label className="text-[10px] text-gray-500 mb-1 block">Accent color</label>
+                        <div className="flex items-center gap-1.5">
+                          <input type="color" value={cfg.color} onChange={e => setCfg(c => ({...c, color: e.target.value}))} className="w-8 h-7 rounded border border-gray-200 cursor-pointer" />
+                          <input value={cfg.color} onChange={e => setCfg(c => ({...c, color: e.target.value}))} className="flex-1 px-2 py-1 rounded-lg border border-gray-200 text-xs font-mono focus:outline-none" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-gray-900 text-green-400 font-mono text-[10px] p-2 rounded-lg break-all">{embedCode}</div>
+                  </div>
+                )}
               </div>
             </div>
-            <div>
-              <label className="text-[10px] text-ink-muted block mb-1">Number of reviews to show</label>
-              <input type="number" value={numReviews} onChange={e => setNumReviews(+e.target.value)} min={1} max={50} className="w-full px-2.5 py-1.5 rounded-lg bg-surface-tint border border-surface-border text-xs text-ink focus:outline-none" />
-            </div>
-            <div>
-              <label className="text-[10px] text-ink-muted block mb-1">Accent color</label>
-              <div className="flex items-center gap-2">
-                <input type="color" value={accentColor} onChange={e => setAccentColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer border border-surface-border" />
-                <input value={accentColor} onChange={e => setAccentColor(e.target.value)} className="flex-1 px-2.5 py-1.5 rounded-lg bg-surface-tint border border-surface-border text-xs text-ink focus:outline-none font-mono" />
+          );
+        })}
+      </div>
+
+      {/* Shopify install instructions */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 mt-2">
+        <div className="text-sm font-semibold text-gray-800 mb-1">How to install</div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+          {[
+            { step: "1", title: "Copy code", desc: "Click 'Customize' on any widget, configure settings, copy the embed snippet." },
+            { step: "2", title: "Open Shopify theme", desc: "Shopify Admin → Online Store → Themes → Edit code → find the template file." },
+            { step: "3", title: "Paste & save", desc: "Paste the snippet where you want the widget to appear and save. Done." },
+          ].map(s => (
+            <div key={s.step} className="flex gap-3">
+              <div className="w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold flex items-center justify-center shrink-0">{s.step}</div>
+              <div>
+                <div className="text-xs font-semibold text-gray-800">{s.title}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{s.desc}</div>
               </div>
             </div>
-          </div>
-
-          <div className="card space-y-2">
-            <div className="text-xs font-semibold text-ink flex items-center gap-1.5"><Settings className="w-3.5 h-3.5" />Shopify theme.liquid install</div>
-            <p className="text-[11px] text-ink-muted">Paste this snippet in your theme.liquid before the closing body tag:</p>
-            <div className="bg-surface-tint rounded-lg p-2.5 font-mono text-[10px] text-ink-muted whitespace-pre-wrap break-all">{shopifySnippet}</div>
-            <CopyButton text={shopifySnippet} />
-          </div>
-
-          <div className="card space-y-2">
-            <div className="text-xs font-semibold text-ink">Rich snippets (JSON-LD for SEO)</div>
-            <p className="text-[11px] text-ink-muted">Add to product.liquid to enable star ratings in Google search results:</p>
-            <div className="bg-surface-tint rounded-lg p-2.5 font-mono text-[10px] text-ink-muted whitespace-pre-wrap">{richSnippet}</div>
-            <CopyButton text={richSnippet} />
-          </div>
+          ))}
         </div>
       </div>
     </div>
@@ -789,7 +951,7 @@ const TABS = [
   { id: "qa", label: "Q&A", icon: HelpCircle },
   { id: "settings", label: "Request Settings", icon: Settings },
   { id: "import", label: "Import", icon: Upload },
-  { id: "ugc", label: "UGC Assets", icon: ImageIcon },
+  { id: "ugc", label: "Creative Center", icon: ImageIcon },
   { id: "widgets", label: "Widgets", icon: Eye },
 ] as const;
 

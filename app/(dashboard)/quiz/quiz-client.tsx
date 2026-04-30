@@ -214,7 +214,16 @@ function AnalyticsTab({ quizzes, responses }: { quizzes: any[]; responses: any[]
 }
 
 /* ─── Integrations Tab ──────────────────────────── */
-function IntegrationsTab() {
+function IntegrationsTab({ quizzes, brandId }: { quizzes: any[]; brandId: string }) {
+  const [selectedQuizId, setSelectedQuizId] = useState<string>(quizzes[0]?.id ?? "");
+  const selectedQuiz = quizzes.find(q => q.id === selectedQuizId);
+  const appUrl = "https://nitaiecompro-nine.vercel.app";
+  const embedUrl = selectedQuizId
+    ? `${appUrl}/quiz/embed/${selectedQuizId}?brand_id=${brandId}`
+    : null;
+  const iframeCode = embedUrl
+    ? `<div id="quiz-embed" style="width:100%;max-width:680px;margin:0 auto">\n  <iframe \n    src="${embedUrl}"\n    width="100%" \n    height="620" \n    frameborder="0"\n    style="border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.08)"\n  ></iframe>\n</div>`
+    : null;
   const [klaviyoId, setKlaviyoId] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
 
@@ -256,34 +265,95 @@ function IntegrationsTab() {
 
   return (
     <div className="space-y-4">
-      {/* Embed Code section */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-5">
         <div className="flex items-center gap-2 mb-1">
           <Code2 className="w-4 h-4 text-indigo-500" />
           <h3 className="text-sm font-semibold text-gray-800">Embed Quiz on Your Store</h3>
         </div>
-        <p className="text-xs text-gray-500 mb-4">Copy this snippet and inject it into your Shopify homepage section or ask the agent to do it automatically.</p>
+        <p className="text-xs text-gray-500 mb-4">Select a quiz, copy the embed snippet, and paste it in your Shopify homepage — or ask the agent to inject it automatically.</p>
 
-        <div className="space-y-3">
-          <div>
-            <div className="text-xs font-medium text-gray-600 mb-1">Iframe embed (recommended)</div>
-            <div className="bg-gray-900 text-green-400 text-xs font-mono p-3 rounded-xl overflow-x-auto whitespace-pre">{`<div id="quiz-embed" style="width:100%;max-width:680px;margin:0 auto">
-  <iframe
-    src="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://nitaiecompro-nine.vercel.app'}/quiz/embed/QUIZ_ID?brand_id=BRAND_ID"
-    width="100%"
-    height="620"
-    frameborder="0"
-    style="border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.08)"
-  ></iframe>
-</div>`}</div>
-            <button onClick={() => navigator.clipboard.writeText(`<!-- Quiz Embed -->\n<div id="quiz-embed" style="width:100%;max-width:680px;margin:0 auto"><iframe src="https://nitaiecompro-nine.vercel.app/quiz/embed/QUIZ_ID?brand_id=BRAND_ID" width="100%" height="620" frameborder="0" style="border-radius:16px"></iframe></div>`)} className="mt-2 text-xs text-indigo-500 hover:text-indigo-700 flex items-center gap-1"><Copy className="w-3 h-3" /> Copy snippet</button>
+        {quizzes.length === 0 ? (
+          <div className="text-center py-8 text-sm text-gray-400">
+            <div className="text-2xl mb-2">🧠</div>
+            No quizzes yet. Design one in the Canvas Editor tab first, then come back here to get the embed code.
           </div>
-          <div className="border-t border-gray-100 pt-3">
-            <div className="text-xs font-medium text-gray-600 mb-1">🤖 Auto-inject via Agent</div>
-            <p className="text-xs text-gray-500">The SEO/store agent can inject this directly into your Shopify homepage theme using the Shopify Theme MCP — no manual copy-paste needed.</p>
+        ) : (
+          <div className="space-y-3">
+            {/* Quiz selector */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Select quiz to embed</label>
+              <select
+                value={selectedQuizId}
+                onChange={e => setSelectedQuizId(e.target.value)}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+              >
+                {quizzes.map((q: any) => (
+                  <option key={q.id} value={q.id}>
+                    {q.name ?? q.title ?? `Quiz ${q.id.slice(0, 8)}`}
+                    {q.is_active ? " ✓ Active" : " (inactive)"}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Live URL preview */}
+            {embedUrl && (
+              <div className="bg-indigo-50 rounded-xl px-3 py-2 text-xs font-mono text-indigo-700 break-all">
+                {embedUrl}
+              </div>
+            )}
+
+            {/* Iframe code */}
+            {iframeCode && (
+              <div>
+                <div className="text-xs font-medium text-gray-600 mb-1">Iframe embed code</div>
+                <div className="bg-gray-900 text-green-400 text-xs font-mono p-3 rounded-xl overflow-x-auto whitespace-pre">{iframeCode}</div>
+                <button
+                  onClick={() => navigator.clipboard.writeText(iframeCode)}
+                  className="mt-2 text-xs text-indigo-500 hover:text-indigo-700 flex items-center gap-1"
+                >
+                  <Copy className="w-3 h-3" /> Copy embed code
+                </button>
+              </div>
+            )}
+
+            <div className="border-t border-gray-100 pt-3">
+              <div className="text-xs font-medium text-gray-600 mb-1">🤖 Auto-inject via Agent</div>
+              <p className="text-xs text-gray-500">The store agent can inject this directly into your Shopify homepage theme using the Shopify Theme MCP — give it the instruction and it handles everything.</p>
+            </div>
           </div>
+        )}
+      </div>
+      {/* Email Integration card */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-5">
+        <div className="flex items-center gap-2 mb-1">
+          <Mail className="w-4 h-4 text-indigo-500" />
+          <h3 className="text-sm font-semibold text-gray-800">Email App Integration</h3>
+          <span className="ml-auto text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Auto-connected</span>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">Every email captured through the quiz is automatically added to your Email App contacts and placed in the <strong>&quot;Quiz Takers&quot;</strong> segment — ready for nurture flows.</p>
+
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { icon: "📧", title: "Email captured", desc: "Visitor submits quiz with email" },
+            { icon: "→", title: "", desc: "" },
+            { icon: "👥", title: "Quiz Takers segment", desc: "Added to Email App automatically" },
+          ].map((s, i) => s.title ? (
+            <div key={i} className="bg-indigo-50 rounded-xl p-3 text-center">
+              <div className="text-xl mb-1">{s.icon}</div>
+              <div className="text-xs font-semibold text-indigo-800">{s.title}</div>
+              <div className="text-[10px] text-indigo-600 mt-0.5">{s.desc}</div>
+            </div>
+          ) : (
+            <div key={i} className="flex items-center justify-center text-2xl text-gray-300">{s.icon}</div>
+          ))}
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
+          💡 Go to <strong>Emails &amp; SMS → Segments</strong> to create a flow targeting &quot;Quiz Takers&quot; — they&apos;re your highest-intent subscribers.
         </div>
       </div>
+
       {integrations.map(int => (
         <div key={int.key} className="bg-white rounded-xl border border-gray-200 p-5">
           <div className="flex items-start gap-3">
@@ -815,7 +885,7 @@ export default function QuizClient({ brandId, quizzes, responses }: Props) {
 
       {tab === "Overview" && <OverviewTab quizzes={quizzes} responses={responses} />}
       {tab === "Analytics" && <AnalyticsTab quizzes={quizzes} responses={responses} />}
-      {tab === "Integrations" && <IntegrationsTab />}
+      {tab === "Integrations" && <IntegrationsTab quizzes={quizzes} brandId={brandId} />}
       {tab === "Canvas Editor" && <QuizCanvasEditor brandId={brandId} quizId={quizzes[0]?.id} />}
     </div>
   );

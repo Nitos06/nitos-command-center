@@ -16,7 +16,7 @@ interface Props {
   quantityBreaks: any[];
 }
 
-const TABS = ["Quantity Breaks", "Cart Upsells", "Analytics", "Volume Discount"] as const;
+const TABS = ["Cart Upsells", "Analytics", "Volume Discount", "Cart Drawer"] as const;
 type Tab = typeof TABS[number];
 
 type BundleType = "fixed" | "fbt" | "volume" | "bogo";
@@ -857,239 +857,6 @@ function BundlesTab({ brandId, initialBundles }: { brandId: string; initialBundl
   );
 }
 
-/* ─── Quantity Breaks Tab ───────────────────────── */
-function QtyBreaksTab({
-  brandId,
-  quantityBreaks,
-}: {
-  brandId: string;
-  quantityBreaks: any[];
-}) {
-  const [breaks, setBreaks] = useState<any[]>(quantityBreaks);
-  const [adding, setAdding] = useState(false);
-  const [productSearch, setProductSearch] = useState("");
-  const [tiers, setTiers] = useState<Tier[]>([
-    { qty: 2, discount_pct: 10, label: "Buy 2 Save 10%", badge: "" },
-    { qty: 3, discount_pct: 15, label: "Buy 3 Save 15%", badge: "Most Popular" },
-    { qty: 5, discount_pct: 20, label: "Buy 5 Save 20%", badge: "Best Value" },
-  ]);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-
-  const updateTier = (i: number, patch: Partial<Tier>) =>
-    setTiers(ts => ts.map((t, j) => (j === i ? { ...t, ...patch } : t)));
-
-  const removeTier = (i: number) => setTiers(ts => ts.filter((_, j) => j !== i));
-
-  const addTier = () =>
-    setTiers(ts => [...ts, { qty: ts.length + 2, discount_pct: 5, label: "", badge: "" }]);
-
-  const handleSubmit = async () => {
-    setSubmitError("");
-    setSubmitting(true);
-    try {
-      // TODO: POST /api/bundles/quantity-breaks when route is ready
-      console.log("POST /api/bundles/quantity-breaks", {
-        brandId,
-        productSearch,
-        tiers,
-      });
-      const res = await fetch("/api/bundles/quantity-breaks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brandId, product: productSearch, tiers }),
-      }).catch(() => null);
-
-      if (res && res.ok) {
-        const newBreak = await res.json();
-        setBreaks(bs => [newBreak, ...bs]);
-      } else {
-        // Optimistically add a placeholder if API not ready
-        setBreaks(bs => [
-          {
-            id: Date.now(),
-            product_title: productSearch || "New quantity break",
-            tiers_count: tiers.length,
-            is_active: true,
-            revenue_impact: null,
-          },
-          ...bs,
-        ]);
-      }
-      setAdding(false);
-      setProductSearch("");
-      setTiers([
-        { qty: 2, discount_pct: 10, label: "Buy 2 Save 10%", badge: "" },
-        { qty: 3, discount_pct: 15, label: "Buy 3 Save 15%", badge: "Most Popular" },
-        { qty: 5, discount_pct: 20, label: "Buy 5 Save 20%", badge: "Best Value" },
-      ]);
-    } catch (e: any) {
-      setSubmitError(e.message ?? "Failed to save");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition"
-        >
-          <Plus className="w-4 h-4" /> Add Quantity Break
-        </button>
-      </div>
-
-      {breaks.length === 0 && !adding && (
-        <div className="text-center py-12 text-gray-400 text-sm">
-          No quantity breaks yet. Click "Add Quantity Break" to configure your first one.
-        </div>
-      )}
-
-      {breaks.length > 0 && (
-        <div className="space-y-2">
-          {breaks.map((qb, i) => (
-            <div
-              key={qb.id ?? i}
-              className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4"
-            >
-              <div className="flex-1 font-medium text-sm text-gray-900">
-                {qb.product_title ?? "Product"}
-              </div>
-              <div className="text-xs text-gray-500">{qb.tiers_count ?? 3} tiers</div>
-              <Badge
-                label={qb.is_active ? "Active" : "Inactive"}
-                color={qb.is_active ? "green" : "gray"}
-              />
-              <div className="text-xs text-gray-500">
-                {qb.revenue_impact ? `+$${qb.revenue_impact}` : "—"}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {adding && (
-        <div className="bg-white rounded-xl border border-indigo-200 p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-gray-900 text-sm">Configure Quantity Break</span>
-            <button type="button" onClick={() => setAdding(false)} className="text-gray-400 hover:text-gray-600">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {submitError && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              {submitError}
-            </div>
-          )}
-
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Product name or ID</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-              <input
-                value={productSearch}
-                onChange={e => setProductSearch(e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                placeholder="Search Shopify products…"
-              />
-            </div>
-          </div>
-
-          <div>
-            <div className="text-xs text-gray-500 mb-2">Tiers</div>
-            <div className="space-y-2">
-              {tiers.map((tier, i) => (
-                <div key={i} className="grid grid-cols-4 gap-2 items-center">
-                  <input
-                    type="number"
-                    min={1}
-                    value={tier.qty}
-                    onChange={e => updateTier(i, { qty: +e.target.value })}
-                    className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 text-center"
-                    placeholder="Qty"
-                  />
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={tier.discount_pct}
-                    onChange={e => updateTier(i, { discount_pct: +e.target.value })}
-                    className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 text-center"
-                    placeholder="% off"
-                  />
-                  <input
-                    value={tier.label}
-                    onChange={e => updateTier(i, { label: e.target.value })}
-                    className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                    placeholder="Label"
-                  />
-                  <div className="flex gap-1">
-                    <input
-                      value={tier.badge}
-                      onChange={e => updateTier(i, { badge: e.target.value })}
-                      className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                      placeholder="Badge"
-                    />
-                    <button type="button" onClick={() => removeTier(i)} className="text-gray-300 hover:text-red-400">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addTier}
-                className="text-xs text-indigo-500 hover:text-indigo-700"
-              >
-                + Add tier
-              </button>
-            </div>
-          </div>
-
-          {/* Widget preview */}
-          <div className="border border-dashed border-gray-300 rounded-xl p-4">
-            <div className="text-xs text-gray-400 mb-2">Widget preview</div>
-            <div className="space-y-1.5">
-              {tiers.map((tier, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center justify-between px-3 py-2 rounded-lg border ${
-                    i === 0 ? "border-indigo-500 bg-indigo-50" : "border-gray-200"
-                  }`}
-                >
-                  <div className="text-sm font-medium text-gray-800">
-                    Buy {tier.qty} — {tier.label || `${tier.discount_pct}% off`}
-                  </div>
-                  {tier.badge && (
-                    <span className="text-[11px] px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full font-semibold">
-                      {tier.badge}
-                    </span>
-                  )}
-                  <div className="text-sm font-bold text-indigo-700">{tier.discount_pct}% off</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {submitting ? "Saving…" : "Save Quantity Break"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ─── Cart Upsells Tab ──────────────────────────── */
 function CartUpsellsTab({ brandId }: { brandId: string }) {
   const [enabled, setEnabled] = useState(true);
@@ -1686,9 +1453,235 @@ function VolumeBundleEditor({ brandId }: { brandId: string }) {
   );
 }
 
+/* ─── Cart Drawer Tab ───────────────────────────── */
+function CartDrawerTab({ brandId }: { brandId: string }) {
+  const [cfg, setCfg] = useState({
+    title: "Your Cart",
+    bgColor: "#ffffff",
+    accentColor: "#111111",
+    buttonText: "Checkout",
+    buttonBg: "#111111",
+    buttonTextColor: "#ffffff",
+    showUpsell: true,
+    upsellHeading: "You might also like",
+    upsellProductTitle: "Premium Bundle — Save 20%",
+    upsellProductPrice: "39.00",
+    upsellOriginalPrice: "49.00",
+    showFreeShippingBar: true,
+    freeShippingThreshold: 75,
+    showTrustBadges: true,
+    borderRadius: 16,
+  });
+
+  const set = (key: string, val: any) => setCfg(c => ({ ...c, [key]: val }));
+
+  const handleSave = async () => {
+    await fetch("/api/bundles/cart-config", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ brandId, cartDrawerConfig: cfg }),
+    });
+  };
+
+  return (
+    <div className="flex gap-6 h-[calc(100vh-220px)]">
+      {/* Left — Live Preview */}
+      <div className="flex-1 bg-gray-100 rounded-2xl flex items-center justify-end overflow-hidden relative">
+        <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-300 select-none">← Store page</div>
+        {/* Cart Drawer mockup */}
+        <div
+          className="h-full w-[360px] shadow-2xl flex flex-col overflow-hidden shrink-0"
+          style={{ background: cfg.bgColor, borderRadius: `${cfg.borderRadius}px 0 0 ${cfg.borderRadius}px` }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <span className="font-bold text-sm" style={{ color: cfg.accentColor }}>{cfg.title}</span>
+            <button className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-200 transition">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Free shipping bar */}
+          {cfg.showFreeShippingBar && (
+            <div className="px-5 py-2 bg-gray-50 border-b border-gray-100">
+              <div className="text-[10px] text-gray-500 mb-1">Add <strong>${cfg.freeShippingThreshold - 40}</strong> more for free shipping</div>
+              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: "55%", background: cfg.accentColor }} />
+              </div>
+            </div>
+          )}
+
+          {/* Cart item */}
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+            <div className="flex gap-3 items-start">
+              <div className="w-14 h-14 bg-gray-100 rounded-xl shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold text-gray-800 truncate">Your Product Name</div>
+                <div className="text-[10px] text-gray-400 mb-1">Variant: Default</div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                    <button className="w-6 h-6 flex items-center justify-center text-gray-400 hover:bg-gray-50 text-xs">−</button>
+                    <span className="w-6 text-center text-xs text-gray-700">1</span>
+                    <button className="w-6 h-6 flex items-center justify-center text-gray-400 hover:bg-gray-50 text-xs">+</button>
+                  </div>
+                  <span className="text-xs font-bold text-gray-900">$49.00</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Upsell section */}
+            {cfg.showUpsell && (
+              <div className="border border-dashed border-gray-200 rounded-xl p-3">
+                <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">{cfg.upsellHeading}</div>
+                <div className="flex gap-2 items-center">
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-gray-800 truncate">{cfg.upsellProductTitle}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold" style={{ color: cfg.accentColor }}>${cfg.upsellProductPrice}</span>
+                      <span className="text-[10px] text-gray-400 line-through">${cfg.upsellOriginalPrice}</span>
+                    </div>
+                  </div>
+                  <button className="text-[10px] px-2 py-1 rounded-lg border font-medium transition" style={{ borderColor: cfg.accentColor, color: cfg.accentColor }}>Add</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Trust badges */}
+          {cfg.showTrustBadges && (
+            <div className="px-5 py-2 border-t border-gray-100 flex items-center justify-center gap-4">
+              {["🔒 Secure", "✈️ Free ship", "↩️ Returns"].map(b => (
+                <span key={b} className="text-[9px] text-gray-400">{b}</span>
+              ))}
+            </div>
+          )}
+
+          {/* Footer / Checkout */}
+          <div className="px-5 pb-5 pt-2 space-y-2">
+            <div className="flex items-center justify-between text-xs mb-2">
+              <span className="text-gray-500">Subtotal</span>
+              <span className="font-bold text-gray-900">$49.00</span>
+            </div>
+            <button
+              className="w-full py-3 text-sm font-bold rounded-xl transition"
+              style={{ background: cfg.buttonBg, color: cfg.buttonTextColor, borderRadius: cfg.borderRadius / 2 }}
+            >
+              {cfg.buttonText}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Right — Settings Panel */}
+      <div className="w-[300px] shrink-0 flex flex-col bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-100 font-semibold text-sm text-gray-800">Cart Drawer Settings</div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+          {/* General */}
+          <div>
+            <div className="text-[10px] font-bold uppercase text-gray-400 tracking-wider mb-2">General</div>
+            <div className="space-y-2">
+              <div>
+                <label className="text-xs text-gray-600 mb-1 block">Title</label>
+                <input value={cfg.title} onChange={e => set("title", e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-600 mb-1 block">Checkout button text</label>
+                <input value={cfg.buttonText} onChange={e => set("buttonText", e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-600 mb-1 block">Border radius: {cfg.borderRadius}px</label>
+                <input type="range" min={0} max={24} value={cfg.borderRadius} onChange={e => set("borderRadius", +e.target.value)} className="w-full" />
+              </div>
+            </div>
+          </div>
+
+          {/* Colors */}
+          <div>
+            <div className="text-[10px] font-bold uppercase text-gray-400 tracking-wider mb-2">Colors</div>
+            <div className="space-y-2">
+              {[
+                { label: "Background", key: "bgColor" },
+                { label: "Accent / text", key: "accentColor" },
+                { label: "Button background", key: "buttonBg" },
+                { label: "Button text", key: "buttonTextColor" },
+              ].map(({ label, key }) => (
+                <div key={key} className="flex items-center justify-between">
+                  <label className="text-xs text-gray-600">{label}</label>
+                  <div className="flex items-center gap-1.5">
+                    <input type="color" value={(cfg as any)[key]} onChange={e => set(key, e.target.value)} className="w-8 h-6 rounded border border-gray-200 cursor-pointer" />
+                    <input value={(cfg as any)[key]} onChange={e => set(key, e.target.value)} className="w-20 text-xs border border-gray-200 rounded px-1.5 py-1 font-mono focus:outline-none" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Features */}
+          <div>
+            <div className="text-[10px] font-bold uppercase text-gray-400 tracking-wider mb-2">Features</div>
+            <div className="space-y-2">
+              {[
+                { label: "Show upsell section", key: "showUpsell" },
+                { label: "Free shipping bar", key: "showFreeShippingBar" },
+                { label: "Trust badges", key: "showTrustBadges" },
+              ].map(({ label, key }) => (
+                <div key={key} className="flex items-center justify-between">
+                  <span className="text-xs text-gray-600">{label}</span>
+                  <label className="relative inline-flex cursor-pointer items-center">
+                    <input type="checkbox" checked={(cfg as any)[key]} onChange={e => set(key, e.target.checked)} className="peer sr-only" />
+                    <div className="peer h-5 w-9 rounded-full bg-gray-200 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition peer-checked:bg-indigo-500 peer-checked:after:translate-x-4" />
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Upsell config */}
+          {cfg.showUpsell && (
+            <div>
+              <div className="text-[10px] font-bold uppercase text-gray-400 tracking-wider mb-2">Upsell Product</div>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-xs text-gray-600 mb-1 block">Section heading</label>
+                  <input value={cfg.upsellHeading} onChange={e => set("upsellHeading", e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-600 mb-1 block">Product title</label>
+                  <input value={cfg.upsellProductTitle} onChange={e => set("upsellProductTitle", e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="text-xs text-gray-600 mb-1 block">Price</label>
+                    <input value={cfg.upsellProductPrice} onChange={e => set("upsellProductPrice", e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-xs text-gray-600 mb-1 block">Original price</label>
+                    <input value={cfg.upsellOriginalPrice} onChange={e => set("upsellOriginalPrice", e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                </div>
+                {cfg.showFreeShippingBar && (
+                  <div>
+                    <label className="text-xs text-gray-600 mb-1 block">Free shipping threshold: ${cfg.freeShippingThreshold}</label>
+                    <input type="range" min={0} max={200} value={cfg.freeShippingThreshold} onChange={e => set("freeShippingThreshold", +e.target.value)} className="w-full" />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="p-4 border-t border-gray-100 flex gap-2">
+          <button onClick={handleSave} className="flex-1 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-xl hover:bg-indigo-700 transition">Save to Brand</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Root Component ────────────────────────────── */
 export default function BundlesClient({ brandId, bundles, quantityBreaks }: Props) {
-  const [tab, setTab] = useState<Tab>("Volume Discount");
+  const [tab, setTab] = useState<Tab>("Cart Upsells");
 
   return (
     <div className="space-y-5">
@@ -1709,12 +1702,10 @@ export default function BundlesClient({ brandId, bundles, quantityBreaks }: Prop
         ))}
       </div>
 
-      {tab === "Quantity Breaks" && (
-        <QtyBreaksTab brandId={brandId} quantityBreaks={quantityBreaks} />
-      )}
       {tab === "Cart Upsells" && <CartUpsellsTab brandId={brandId} />}
       {tab === "Analytics" && <BundleAnalyticsTab bundles={bundles} />}
       {tab === "Volume Discount" && <VolumeBundleEditor brandId={brandId} />}
+      {tab === "Cart Drawer" && <CartDrawerTab brandId={brandId} />}
     </div>
   );
 }
