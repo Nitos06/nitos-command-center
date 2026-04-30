@@ -23,6 +23,7 @@ import {
   Hammer,
   Bot,
   PenLine,
+  BookOpen,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -66,6 +67,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/taxes",        label: "Taxes (IL)",   icon: Receipt           },
       { href: "/ecom-builder", label: "Ecom Builder", icon: Hammer            },
       { href: "/agents",       label: "Agents",       icon: Bot               },
+      { href: "/setup",        label: "Setup & Docs", icon: BookOpen          },
     ],
   },
 ];
