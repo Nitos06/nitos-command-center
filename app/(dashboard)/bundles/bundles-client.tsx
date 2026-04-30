@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Plus, Trash2, Copy, Pause, Play, BarChart2, Package, Settings2,
   ChevronDown, Check, Search, ShoppingBag, Layers, X, Edit2, Tag,
-  AlertCircle
+  AlertCircle, ChevronUp, ChevronRight
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
@@ -16,7 +16,7 @@ interface Props {
   quantityBreaks: any[];
 }
 
-const TABS = ["Bundles", "Quantity Breaks", "Cart Upsells", "Analytics"] as const;
+const TABS = ["Bundles", "Quantity Breaks", "Cart Upsells", "Analytics", "Volume Discount"] as const;
 type Tab = typeof TABS[number];
 
 type BundleType = "fixed" | "fbt" | "volume" | "bogo";
@@ -1390,6 +1390,302 @@ function BundleAnalyticsTab({ bundles }: { bundles: any[] }) {
   );
 }
 
+/* ─── Volume Bundle Editor ──────────────────────── */
+interface VolumeTier {
+  qty: number;
+  pct: number;
+  label: string;
+  badge: string;
+}
+
+interface GuaranteeItem {
+  title: string;
+  desc: string;
+}
+
+interface VolumeCfg {
+  unitPrice: number;
+  title: string;
+  subtitle: string;
+  ctaText: string;
+  bgColor: string;
+  accentColor: string;
+  buttonBg: string;
+  buttonText: string;
+  tiers: VolumeTier[];
+  guarantees: GuaranteeItem[];
+}
+
+function CollapseSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 transition text-sm font-semibold text-gray-700">
+        {title}
+        {open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+      </button>
+      {open && <div className="p-4 space-y-3 bg-white">{children}</div>}
+    </div>
+  );
+}
+
+function VolumeBundleEditor({ brandId }: { brandId: string }) {
+  const [cfg, setCfg] = useState<VolumeCfg>({
+    unitPrice: 49,
+    title: 'Choose Your Bundle',
+    subtitle: 'Save more when you buy more',
+    ctaText: 'Add to Cart',
+    bgColor: '#f7f5f2',
+    accentColor: '#2c2c2c',
+    buttonBg: '#2c2c2c',
+    buttonText: '#ffffff',
+    tiers: [
+      { qty: 1, pct: 0, label: '1 Unit', badge: '' },
+      { qty: 2, pct: 10, label: '2 Units', badge: 'Most Popular' },
+      { qty: 3, pct: 20, label: '3 Units', badge: 'Best Value' },
+    ],
+    guarantees: [
+      { title: '30-Day Guarantee', desc: 'Not happy? Full refund, no questions asked.' },
+      { title: 'Free Shipping', desc: 'On all orders over $75. Delivered fast.' },
+      { title: 'Premium Quality', desc: 'Every batch tested and certified.' },
+      { title: 'Fast Support', desc: 'Real humans. Reply within 24 hours.' },
+    ],
+  });
+
+  const [selectedTier, setSelectedTier] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const linkId = 'barlow-font';
+      if (!document.getElementById(linkId)) {
+        const link = document.createElement('link');
+        link.id = linkId;
+        link.rel = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;800&display=swap';
+        document.head.appendChild(link);
+      }
+    }
+  }, []);
+
+  const set = <K extends keyof VolumeCfg>(key: K, val: VolumeCfg[K]) => setCfg(c => ({ ...c, [key]: val }));
+
+  const updateTier = (i: number, patch: Partial<VolumeTier>) =>
+    set('tiers', cfg.tiers.map((t, j) => j === i ? { ...t, ...patch } : t));
+
+  const removeTier = (i: number) => {
+    set('tiers', cfg.tiers.filter((_, j) => j !== i));
+    if (selectedTier >= i && selectedTier > 0) setSelectedTier(s => s - 1);
+  };
+
+  const addTier = () => set('tiers', [...cfg.tiers, { qty: cfg.tiers.length + 1, pct: 5, label: `${cfg.tiers.length + 1} Units`, badge: '' }]);
+
+  const updateGuarantee = (i: number, patch: Partial<GuaranteeItem>) =>
+    set('guarantees', cfg.guarantees.map((g, j) => j === i ? { ...g, ...patch } : g));
+
+  const removeGuarantee = (i: number) => set('guarantees', cfg.guarantees.filter((_, j) => j !== i));
+
+  const addGuarantee = () => set('guarantees', [...cfg.guarantees, { title: 'New Guarantee', desc: 'Description here.' }]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await fetch('/api/bundles/brand-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandId, volumeConfig: cfg }),
+      });
+    } catch {}
+    setSaving(false);
+  };
+
+  const embedSnippet = `<div id="volume-bundle-widget" data-brand="${brandId}"></div>\n<script src="/widgets/volume-bundle.js"></script>`;
+
+  const handleCopyEmbed = () => {
+    navigator.clipboard.writeText(embedSnippet);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const currentTierSafe = cfg.tiers[selectedTier] ?? cfg.tiers[0];
+  const totalPrice = currentTierSafe ? cfg.unitPrice * currentTierSafe.qty * (1 - currentTierSafe.pct / 100) : 0;
+  const perUnit = currentTierSafe ? cfg.unitPrice * (1 - currentTierSafe.pct / 100) : 0;
+  const savings = currentTierSafe ? cfg.unitPrice * currentTierSafe.qty * currentTierSafe.pct / 100 : 0;
+
+  return (
+    <div className="flex gap-6 items-start">
+      {/* Left: Live widget preview */}
+      <div className="flex-1">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="text-xs font-semibold uppercase text-gray-400 mb-4">Live Preview</div>
+          <div style={{ background: cfg.bgColor, borderRadius: 16, padding: 24, maxWidth: 460, fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <h2 style={{ fontWeight: 700, fontSize: 22, textAlign: 'center', marginBottom: 4, color: '#111' }}>{cfg.title}</h2>
+            <p style={{ color: '#888', textAlign: 'center', fontSize: 14, marginBottom: 16 }}>{cfg.subtitle}</p>
+
+            {/* Tier selector */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              {cfg.tiers.map((t, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedTier(i)}
+                  style={{
+                    flex: 1, padding: '12px 8px', borderRadius: 12,
+                    border: selectedTier === i ? `2px solid ${cfg.accentColor}` : '2px solid #e0e0e0',
+                    background: selectedTier === i ? cfg.accentColor : '#fff',
+                    color: selectedTier === i ? cfg.buttonText : '#333',
+                    fontFamily: 'inherit', cursor: 'pointer', position: 'relative',
+                  }}
+                >
+                  {t.badge && (
+                    <span style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: '#ff6b35', color: '#fff', fontSize: 10, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                      {t.badge}
+                    </span>
+                  )}
+                  <div style={{ fontWeight: 700, fontSize: 16 }}>{t.label}</div>
+                  <div style={{ fontSize: 13, color: selectedTier === i ? 'rgba(255,255,255,0.8)' : '#888' }}>
+                    {t.pct > 0 ? `${t.pct}% off` : 'Regular price'}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Price panel */}
+            <div style={{ background: '#fff', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: 13, color: '#888' }}>Total Price</div>
+                  <div style={{ fontSize: 28, fontWeight: 800 }}>${totalPrice.toFixed(2)}</div>
+                  <div style={{ fontSize: 12, color: '#888' }}>
+                    ${perUnit.toFixed(2)} per unit
+                    {(currentTierSafe?.pct ?? 0) > 0 && ` · You save $${savings.toFixed(2)}`}
+                  </div>
+                </div>
+                {(currentTierSafe?.pct ?? 0) > 0 && (
+                  <div style={{ background: '#e8f5e9', color: '#2dc653', fontWeight: 700, borderRadius: 8, padding: '4px 10px', fontSize: 14 }}>
+                    {currentTierSafe.pct}% OFF
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* CTA button */}
+            <button style={{ width: '100%', padding: 14, borderRadius: 12, background: cfg.buttonBg, color: cfg.buttonText, fontFamily: 'inherit', fontWeight: 700, fontSize: 16, border: 'none', cursor: 'pointer', marginBottom: 16 }}>
+              {cfg.ctaText} — ${totalPrice.toFixed(2)}
+            </button>
+
+            {/* Guarantees */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {cfg.guarantees.map((g, i) => (
+                <div key={i} style={{ background: '#fff', borderRadius: 10, padding: '10px 12px' }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{g.title}</div>
+                  <div style={{ fontSize: 11, color: '#888' }}>{g.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Settings panel */}
+      <div className="w-[320px] bg-white rounded-xl border border-gray-200 p-5 space-y-4 h-fit sticky top-4">
+        <div className="text-sm font-semibold text-gray-700">Widget Settings</div>
+
+        <CollapseSection title="General">
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Unit price ($)</label>
+            <input type="number" step={0.01} min={0} value={cfg.unitPrice} onChange={e => set('unitPrice', Number(e.target.value))} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Title</label>
+            <input value={cfg.title} onChange={e => set('title', e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Subtitle</label>
+            <input value={cfg.subtitle} onChange={e => set('subtitle', e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">CTA text</label>
+            <input value={cfg.ctaText} onChange={e => set('ctaText', e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+        </CollapseSection>
+
+        <CollapseSection title="Colors">
+          {([
+            { key: 'bgColor', label: 'Background' },
+            { key: 'accentColor', label: 'Accent / Selected tier' },
+            { key: 'buttonBg', label: 'Button background' },
+            { key: 'buttonText', label: 'Button text' },
+          ] as { key: keyof VolumeCfg; label: string }[]).map(({ key, label }) => (
+            <div key={key} className="flex items-center gap-3">
+              <label className="text-xs text-gray-500 flex-1">{label}</label>
+              <input type="color" value={cfg[key] as string} onChange={e => set(key, e.target.value)} className="w-10 h-7 rounded border border-gray-200 cursor-pointer" />
+              <span className="text-xs font-mono text-gray-500 w-16">{cfg[key] as string}</span>
+            </div>
+          ))}
+        </CollapseSection>
+
+        <CollapseSection title="Tiers">
+          <div className="space-y-3">
+            {cfg.tiers.map((t, i) => (
+              <div key={i} className="border border-gray-100 rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-600">Tier {i + 1}</span>
+                  <button onClick={() => removeTier(i)} className="text-gray-300 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-gray-400 mb-0.5 block">Qty</label>
+                    <input type="number" min={1} value={t.qty} onChange={e => updateTier(i, { qty: Number(e.target.value) })} className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400 mb-0.5 block">Discount %</label>
+                    <input type="number" min={0} max={100} value={t.pct} onChange={e => updateTier(i, { pct: Number(e.target.value) })} className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-400 mb-0.5 block">Label</label>
+                  <input value={t.label} onChange={e => updateTier(i, { label: e.target.value })} className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-400 mb-0.5 block">Badge (optional)</label>
+                  <input value={t.badge} onChange={e => updateTier(i, { badge: e.target.value })} className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Most Popular" />
+                </div>
+              </div>
+            ))}
+            <button onClick={addTier} className="text-xs text-indigo-500 hover:text-indigo-700">+ Add Tier</button>
+          </div>
+        </CollapseSection>
+
+        <CollapseSection title="Guarantees">
+          <div className="space-y-2">
+            {cfg.guarantees.map((g, i) => (
+              <div key={i} className="border border-gray-100 rounded-lg p-2 space-y-1">
+                <div className="flex items-center gap-1">
+                  <input value={g.title} onChange={e => updateGuarantee(i, { title: e.target.value })} className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Title" />
+                  <button onClick={() => removeGuarantee(i)} className="text-gray-300 hover:text-red-400 p-1"><Trash2 className="w-3 h-3" /></button>
+                </div>
+                <input value={g.desc} onChange={e => updateGuarantee(i, { desc: e.target.value })} className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Description" />
+              </div>
+            ))}
+            <button onClick={addGuarantee} className="text-xs text-indigo-500 hover:text-indigo-700">+ Add Guarantee</button>
+          </div>
+        </CollapseSection>
+
+        <div className="flex gap-2 pt-2">
+          <button onClick={handleSave} disabled={saving} className="flex-1 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition disabled:opacity-60">
+            {saving ? 'Saving…' : 'Save to Brand'}
+          </button>
+          <button onClick={handleCopyEmbed} className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition">
+            {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? 'Copied!' : 'Copy Embed'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Root Component ────────────────────────────── */
 export default function BundlesClient({ brandId, bundles, quantityBreaks }: Props) {
   const [tab, setTab] = useState<Tab>("Bundles");
@@ -1421,6 +1717,7 @@ export default function BundlesClient({ brandId, bundles, quantityBreaks }: Prop
       )}
       {tab === "Cart Upsells" && <CartUpsellsTab brandId={brandId} />}
       {tab === "Analytics" && <BundleAnalyticsTab bundles={bundles} />}
+      {tab === "Volume Discount" && <VolumeBundleEditor brandId={brandId} />}
     </div>
   );
 }

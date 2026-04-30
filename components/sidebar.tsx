@@ -15,7 +15,6 @@ import {
   Settings,
   LogOut,
   Star,
-  Package,
   Zap,
   HelpCircle,
   Users,
@@ -46,7 +45,6 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Store",
     items: [
       { href: "/reviews",       label: "Reviews",        icon: Star         },
-      { href: "/bundles",       label: "Bundles",         icon: Package      },
       { href: "/post-purchase", label: "Post-Purchase",   icon: Zap          },
       { href: "/quiz",          label: "Quiz",            icon: HelpCircle   },
       { href: "/affiliates",    label: "Affiliates",      icon: Users        },
