@@ -2,16 +2,17 @@
 
 import { useState, useMemo } from "react";
 import {
-  Users, TrendingUp, MousePointerClick, ShoppingCart, DollarSign,
-  Wallet, CheckCircle2, Clock, Plus, Copy, Mail, MoreHorizontal,
-  ChevronDown, ChevronRight, Shield, AlertTriangle, Settings,
-  ToggleLeft, ToggleRight, Ban, Eye, Send, RefreshCw, Download,
-  Layers, Star,
+  Users, TrendingUp, DollarSign, Gift, MessageSquare, BarChart2,
+  Tag, Image, Trophy, Mail, Store, FileText, Plus, Download, Upload,
+  Send, Copy, Star, Target, Globe, Edit2, Trash2, Check, Ban, Eye,
+  EyeOff, ArrowUpRight, ChevronRight, ChevronDown, X, Search, Filter,
+  Calendar, MoreHorizontal, Package, RefreshCw, AlertTriangle, Shield,
+  ExternalLink, Palette, Info, Clock, CheckCircle2, XCircle,
 } from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AreaChart, Area, LineChart, Line, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { formatMoney, formatPct, formatNumber } from "@/lib/utils";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -24,883 +25,1564 @@ interface Props {
   payouts: any[];
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Shared UI Components ─────────────────────────────────────────────────────
 
-const TABS = ["Overview", "Affiliates", "Programs", "Payouts", "Fraud", "Settings"] as const;
-type Tab = typeof TABS[number];
-
-function statusBadge(status: string) {
-  const map: Record<string, string> = {
-    active: "badge-success",
-    paused: "badge-warn",
-    banned: "badge-crit",
-    pending: "badge-neutral",
-  };
-  return <span className={map[status] ?? "badge-neutral"}>{status}</span>;
+function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      onClick={() => onChange(!on)}
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${on ? "bg-indigo-600" : "bg-gray-200"}`}
+    >
+      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${on ? "translate-x-4" : "translate-x-0.5"}`} />
+    </button>
+  );
 }
 
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function StatusBadge({ status }: { status: string }) {
+  const cls =
+    status === "active" ? "bg-green-100 text-green-700" :
+    status === "pending" ? "bg-amber-100 text-amber-700" :
+    status === "banned" ? "bg-red-100 text-red-700" :
+    status === "paused" ? "bg-gray-100 text-gray-600" :
+    status === "approved" ? "bg-green-100 text-green-700" :
+    status === "denied" ? "bg-red-100 text-red-700" :
+    "bg-gray-100 text-gray-600";
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{status}</span>;
+}
+
+function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-lg border border-surface-border">
-        <div className="flex items-center justify-between p-5 border-b border-surface-border">
-          <h3 className="font-bold text-ink text-base">{title}</h3>
-          <button onClick={onClose} className="text-ink-muted hover:text-ink text-xl leading-none">&times;</button>
+    <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
+      <div className={`bg-white rounded-xl shadow-2xl w-full ${wide ? "max-w-2xl" : "max-w-lg"} max-h-[90vh] flex flex-col`}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+          <h3 className="font-semibold text-gray-900 text-base">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
-        <div className="p-5 space-y-4">{children}</div>
+        <div className="p-5 space-y-4 overflow-y-auto">{children}</div>
       </div>
     </div>
   );
 }
 
-// ─── Overview Tab ─────────────────────────────────────────────────────────────
+function SlideOver({ title, onClose, children, width = "w-[480px]" }: { title: string; onClose: () => void; children: React.ReactNode; width?: string }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex">
+      <div className="flex-1 bg-black/30" onClick={onClose} />
+      <div className={`fixed inset-y-0 right-0 z-[100] ${width} bg-white shadow-2xl border-l border-gray-200 flex flex-col`}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+          <h3 className="font-semibold text-gray-900">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto">{children}</div>
+      </div>
+    </div>
+  );
+}
 
-function OverviewTab({ affiliates, clicks, conversions, payouts }: Pick<Props, "affiliates" | "clicks" | "conversions" | "payouts">) {
-  const totalRevenue = conversions.reduce((s, c) => s + Number(c.order_value ?? 0), 0);
-  const totalCommissions = conversions.reduce((s, c) => s + Number(c.commission_amount ?? 0), 0);
-  const paidOut = payouts.filter(p => p.status === "paid").reduce((s, p) => s + Number(p.amount ?? 0), 0);
-  const pending = payouts.filter(p => p.status === "pending").reduce((s, p) => s + Number(p.amount ?? 0), 0);
-  const convRate = clicks.length > 0 ? (conversions.length / clicks.length) * 100 : 0;
-  const active = affiliates.filter(a => a.status === "active").length;
+function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`bg-white rounded-xl border border-gray-200 p-5 shadow-sm ${className}`}>{children}</div>;
+}
 
-  // Build last-30-day bar chart data from conversions
-  const chartData = useMemo(() => {
-    const days: Record<string, number> = {};
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      days[d.toISOString().slice(0, 10)] = 0;
-    }
-    conversions.forEach(c => {
-      const day = (c.converted_at ?? "").slice(0, 10);
-      if (day in days) days[day] += Number(c.order_value ?? 0);
-    });
-    return Object.entries(days).map(([date, revenue]) => ({ date: date.slice(5), revenue }));
-  }, [conversions]);
+function PrimaryBtn({ onClick, children, className = "" }: { onClick?: () => void; children: React.ReactNode; className?: string }) {
+  return (
+    <button onClick={onClick} className={`bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors ${className}`}>
+      {children}
+    </button>
+  );
+}
 
-  // Top 5 affiliates
-  const convsByAff = useMemo(() => {
-    const map: Record<string, { revenue: number; commission: number; orders: number }> = {};
-    conversions.forEach(c => {
-      const id = c.affiliate_id;
-      map[id] = map[id] ?? { revenue: 0, commission: 0, orders: 0 };
-      map[id].revenue += Number(c.order_value ?? 0);
-      map[id].commission += Number(c.commission_amount ?? 0);
-      map[id].orders += 1;
-    });
-    return map;
-  }, [conversions]);
+function OutlineBtn({ onClick, children, className = "" }: { onClick?: () => void; children: React.ReactNode; className?: string }) {
+  return (
+    <button onClick={onClick} className={`border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-4 py-2 rounded-lg transition-colors ${className}`}>
+      {children}
+    </button>
+  );
+}
 
-  const top5 = affiliates
-    .map(a => ({ ...a, ...(convsByAff[a.id] ?? { revenue: 0, commission: 0, orders: 0 }) }))
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 5);
+function Label({ children }: { children: React.ReactNode }) {
+  return <label className="block text-sm font-medium text-gray-700 mb-1">{children}</label>;
+}
 
-  const kpis = [
-    { label: "Total Affiliates", value: String(affiliates.length), icon: Users, color: "text-primary" },
-    { label: "Active", value: String(active), icon: CheckCircle2, color: "text-emerald-500" },
-    { label: "Total Clicks", value: formatNumber(clicks.length), icon: MousePointerClick, color: "text-blue-500" },
-    { label: "Conversion Rate", value: formatPct(convRate), icon: TrendingUp, color: "text-violet-500" },
-    { label: "Total Revenue", value: formatMoney(totalRevenue), icon: ShoppingCart, color: "text-emerald-600" },
-    { label: "Commissions Owed", value: formatMoney(totalCommissions), icon: DollarSign, color: "text-amber-500" },
-    { label: "Paid Out", value: formatMoney(paidOut), icon: CheckCircle2, color: "text-teal-500" },
-    { label: "Pending Payouts", value: formatMoney(pending), icon: Clock, color: "text-orange-500" },
-  ];
+function Input({ value, onChange, placeholder, type = "text", className = "" }: { value?: string | number; onChange?: (v: string) => void; placeholder?: string; type?: string; className?: string }) {
+  return (
+    <input
+      type={type}
+      value={value ?? ""}
+      onChange={e => onChange?.(e.target.value)}
+      placeholder={placeholder}
+      className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${className}`}
+    />
+  );
+}
+
+function Select({ value, onChange, options, className = "" }: { value?: string; onChange?: (v: string) => void; options: { value: string; label: string }[]; className?: string }) {
+  return (
+    <select
+      value={value ?? ""}
+      onChange={e => onChange?.(e.target.value)}
+      className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white ${className}`}
+    >
+      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  );
+}
+
+function Textarea({ value, onChange, placeholder, rows = 3, className = "" }: { value?: string; onChange?: (v: string) => void; placeholder?: string; rows?: number; className?: string }) {
+  return (
+    <textarea
+      value={value ?? ""}
+      onChange={e => onChange?.(e.target.value)}
+      placeholder={placeholder}
+      rows={rows}
+      className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none ${className}`}
+    />
+  );
+}
+
+function InnerTabs({ tabs, active, onChange }: { tabs: string[]; active: string; onChange: (t: string) => void }) {
+  return (
+    <div className="flex gap-4 border-b border-gray-200 px-5">
+      {tabs.map(t => (
+        <button
+          key={t}
+          onClick={() => onChange(t)}
+          className={`py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${active === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── Mock Data ────────────────────────────────────────────────────────────────
+
+const mockPrograms = [
+  { id: "1", name: "Default Program", commission: 10, cookie: 30, affiliateCount: 12, status: "active" },
+  { id: "2", name: "VIP Affiliates", commission: 15, cookie: 60, affiliateCount: 4, status: "active" },
+  { id: "3", name: "Influencer Tier", commission: 20, cookie: 90, affiliateCount: 2, status: "paused" },
+];
+
+const mockAffiliates = [
+  { id: "1", name: "Jennifer Sheldon", email: "jennifer@example.com", program: "Default Program", status: "active", clicks: 342, referrals: 18, revenue: 2840, commission: 284, lastActive: "2h ago" },
+  { id: "2", name: "Marcus Reid", email: "marcus@example.com", program: "VIP Affiliates", status: "active", clicks: 215, referrals: 11, revenue: 1720, commission: 258, lastActive: "1d ago" },
+  { id: "3", name: "Sarah Kim", email: "sarah@example.com", program: "Default Program", status: "pending", clicks: 87, referrals: 3, revenue: 420, commission: 42, lastActive: "3d ago" },
+  { id: "4", name: "David Torres", email: "david@example.com", program: "Influencer Tier", status: "active", clicks: 512, referrals: 28, revenue: 4200, commission: 840, lastActive: "5h ago" },
+  { id: "5", name: "Emma Wilson", email: "emma@example.com", program: "Default Program", status: "banned", clicks: 12, referrals: 0, revenue: 0, commission: 0, lastActive: "2w ago" },
+];
+
+const mockReferrals = [
+  { id: "R001", customer: "Alice Brown", affiliate: "Jennifer Sheldon", date: "2026-04-29", value: 189, commission: 18.9, status: "approved" },
+  { id: "R002", customer: "Bob Chen", affiliate: "Marcus Reid", date: "2026-04-28", value: 245, commission: 36.75, status: "pending" },
+  { id: "R003", customer: "Carol Davis", affiliate: "David Torres", date: "2026-04-27", value: 312, commission: 62.4, status: "pending" },
+  { id: "R004", customer: "Derek Evans", affiliate: "Jennifer Sheldon", date: "2026-04-26", value: 98, commission: 9.8, status: "denied" },
+  { id: "R005", customer: "Fiona Green", affiliate: "Marcus Reid", date: "2026-04-25", value: 421, commission: 63.15, status: "approved" },
+];
+
+const mockPayouts = [
+  { id: "P001", affiliate: "Jennifer Sheldon", amount: 284, referrals: 18, method: "PayPal", status: "paid", date: "2026-04-01" },
+  { id: "P002", affiliate: "David Torres", amount: 840, referrals: 28, method: "Bank Transfer", status: "paid", date: "2026-04-01" },
+  { id: "P003", affiliate: "Marcus Reid", amount: 258, referrals: 11, method: "PayPal", status: "paid", date: "2026-04-01" },
+];
+
+const mockUnpaid = [
+  { affiliate: "Jennifer Sheldon", amount: 92, referrals: 5 },
+  { affiliate: "David Torres", amount: 210, referrals: 8 },
+  { affiliate: "Marcus Reid", amount: 64, referrals: 3 },
+];
+
+const chartData = Array.from({ length: 30 }, (_, i) => ({
+  day: `Apr ${i + 1}`,
+  revenue: Math.floor(Math.random() * 500 + 100),
+  clicks: Math.floor(Math.random() * 80 + 20),
+}));
+
+// ─── TAB 1: Programs ──────────────────────────────────────────────────────────
+
+function ProgramsTab() {
+  const [programs, setPrograms] = useState(mockPrograms);
+  const [showNew, setShowNew] = useState(false);
+  const [selectedProgram, setSelectedProgram] = useState<any>(null);
+  const [newProgram, setNewProgram] = useState({ name: "", description: "", commission: "10", cookie: "30", approval: "auto" });
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map(k => (
-          <div key={k.label} className="card">
-            <div className="flex items-center gap-2 mb-2">
-              <k.icon className={`w-4 h-4 ${k.color}`} />
-              <span className="kpi-label">{k.label}</span>
-            </div>
-            <div className="kpi-value">{k.value}</div>
-          </div>
-        ))}
+    <div>
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-lg font-semibold text-gray-900">Programs</h2>
+        <PrimaryBtn onClick={() => setShowNew(true)}><Plus size={14} className="inline mr-1" />New Program</PrimaryBtn>
       </div>
 
-      <div className="card">
-        <h3 className="font-semibold text-ink mb-4 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-primary" />
-          Revenue (last 30 days)
-        </h3>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={chartData} barSize={8}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-            <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94A3B8" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: "#94A3B8" }} axisLine={false} tickLine={false} tickFormatter={v => `₪${v}`} />
-            <Tooltip formatter={(v: any) => formatMoney(v)} contentStyle={{ borderRadius: 12, border: "1px solid #E2E8F0", fontSize: 12 }} />
-            <Bar dataKey="revenue" fill="#6366F1" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="card">
-        <h3 className="font-semibold text-ink mb-3">Top 5 Affiliates</h3>
+      <Card>
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-xs text-ink-muted">
-              <th className="pb-2">Name</th>
-              <th className="pb-2">Code</th>
-              <th className="pb-2">Orders</th>
-              <th className="pb-2">Revenue</th>
-              <th className="pb-2">Commission</th>
-              <th className="pb-2">Status</th>
+            <tr className="border-b border-gray-200">
+              {["Program name", "Commission", "Cookie", "# Affiliates", "Status", "Actions"].map(h => (
+                <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide pb-3 pr-4">{h}</th>
+              ))}
             </tr>
           </thead>
-          <tbody>
-            {top5.map(a => (
-              <tr key={a.id} className="table-row-hover">
-                <td className="py-2">
-                  <div className="font-medium text-ink text-xs">{a.name}</div>
-                  <div className="text-[10px] text-ink-muted">{a.email}</div>
+          <tbody className="divide-y divide-gray-100">
+            {programs.map(p => (
+              <tr key={p.id} className="hover:bg-gray-50">
+                <td className="py-3 pr-4 font-medium text-gray-900">{p.name}</td>
+                <td className="py-3 pr-4 text-gray-600">{p.commission}%</td>
+                <td className="py-3 pr-4 text-gray-600">{p.cookie} days</td>
+                <td className="py-3 pr-4 text-gray-600">{p.affiliateCount}</td>
+                <td className="py-3 pr-4">
+                  <div className="flex items-center gap-2">
+                    <Toggle on={p.status === "active"} onChange={v => setPrograms(prev => prev.map(x => x.id === p.id ? { ...x, status: v ? "active" : "paused" } : x))} />
+                    <span className="text-xs text-gray-500">{p.status}</span>
+                  </div>
                 </td>
-                <td><code className="text-xs bg-surface-tint px-1.5 py-0.5 rounded font-mono">{a.discount_code ?? a.referral_code ?? "—"}</code></td>
-                <td className="text-xs">{a.orders}</td>
-                <td className="text-xs font-medium">{formatMoney(a.revenue)}</td>
-                <td className="text-xs font-semibold text-primary">{formatMoney(a.commission)}</td>
-                <td>{statusBadge(a.status)}</td>
+                <td className="py-3">
+                  <button onClick={() => setSelectedProgram(p)} className="text-indigo-600 hover:text-indigo-800 text-xs font-medium">View</button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
-    </div>
-  );
-}
+      </Card>
 
-// ─── Invite Modal ─────────────────────────────────────────────────────────────
-
-function InviteModal({ programs, onClose, brandId }: { programs: any[]; onClose: () => void; brandId: string }) {
-  const [form, setForm] = useState({ name: "", email: "", commission_type: "pct", commission_value: "", program_id: "", message: "" });
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-
-  async function submit() {
-    setLoading(true);
-    await fetch("/api/affiliates/invite", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, brand_id: brandId }),
-    });
-    setLoading(false);
-    setDone(true);
-    setTimeout(onClose, 1500);
-  }
-
-  return (
-    <Modal title="Invite Affiliate" onClose={onClose}>
-      {done ? (
-        <div className="flex flex-col items-center gap-2 py-8">
-          <CheckCircle2 className="w-10 h-10 text-emerald-500" />
-          <p className="font-semibold text-ink">Invitation sent!</p>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Name</label>
-              <input className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Jane Smith" />
-            </div>
-            <div>
-              <label className="label">Email</label>
-              <input className="input" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="jane@example.com" />
-            </div>
+      {showNew && (
+        <Modal title="New Program" onClose={() => setShowNew(false)}>
+          <div><Label>Name</Label><Input value={newProgram.name} onChange={v => setNewProgram(p => ({ ...p, name: v }))} placeholder="Program name" /></div>
+          <div><Label>Description</Label><Textarea value={newProgram.description} onChange={v => setNewProgram(p => ({ ...p, description: v }))} placeholder="Optional description" /></div>
+          <div className="grid grid-cols-2 gap-4">
+            <div><Label>Commission %</Label><Input type="number" value={newProgram.commission} onChange={v => setNewProgram(p => ({ ...p, commission: v }))} /></div>
+            <div><Label>Cookie days</Label><Input type="number" value={newProgram.cookie} onChange={v => setNewProgram(p => ({ ...p, cookie: v }))} /></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Commission Type</label>
-              <select className="input" value={form.commission_type} onChange={e => setForm(f => ({ ...f, commission_type: e.target.value }))}>
-                <option value="pct">Percentage (%)</option>
-                <option value="fixed">Fixed Amount</option>
-              </select>
-            </div>
-            <div>
-              <label className="label">Commission Value</label>
-              <input className="input" type="number" value={form.commission_value} onChange={e => setForm(f => ({ ...f, commission_value: e.target.value }))} placeholder={form.commission_type === "pct" ? "15" : "50"} />
-            </div>
+          <div><Label>Approval</Label>
+            <Select value={newProgram.approval} onChange={v => setNewProgram(p => ({ ...p, approval: v }))} options={[{ value: "auto", label: "Auto" }, { value: "manual", label: "Manual" }]} />
           </div>
-          <div>
-            <label className="label">Program</label>
-            <select className="input" value={form.program_id} onChange={e => setForm(f => ({ ...f, program_id: e.target.value }))}>
-              <option value="">Default program</option>
-              {programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+          <div className="flex justify-end gap-3 pt-2">
+            <OutlineBtn onClick={() => setShowNew(false)}>Cancel</OutlineBtn>
+            <PrimaryBtn onClick={() => { setPrograms(prev => [...prev, { id: Date.now().toString(), ...newProgram, commission: +newProgram.commission, cookie: +newProgram.cookie, affiliateCount: 0, status: "active" }]); setShowNew(false); }}>Create Program</PrimaryBtn>
           </div>
-          <div>
-            <label className="label">Custom Message (optional)</label>
-            <textarea className="input resize-none" rows={3} value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} placeholder="Welcome to our affiliate program…" />
-          </div>
-          <button className="btn-primary w-full" onClick={submit} disabled={loading || !form.name || !form.email}>
-            {loading ? "Sending…" : "Send Invitation"}
-          </button>
-        </>
+        </Modal>
       )}
-    </Modal>
-  );
-}
 
-// ─── Affiliates Tab ───────────────────────────────────────────────────────────
-
-function AffiliatesTab({ affiliates, conversions, programs, brandId }: Pick<Props, "affiliates" | "conversions" | "programs" | "brandId">) {
-  const [showInvite, setShowInvite] = useState(false);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [copied, setCopied] = useState<string | null>(null);
-
-  const convsByAff = useMemo(() => {
-    const map: Record<string, { revenue: number; commission: number; orders: number; history: any[] }> = {};
-    conversions.forEach(c => {
-      const id = c.affiliate_id;
-      map[id] = map[id] ?? { revenue: 0, commission: 0, orders: 0, history: [] };
-      map[id].revenue += Number(c.order_value ?? 0);
-      map[id].commission += Number(c.commission_amount ?? 0);
-      map[id].orders += 1;
-      map[id].history.push(c);
-    });
-    return map;
-  }, [conversions]);
-
-  async function updateStatus(id: string, status: string) {
-    await fetch(`/api/affiliates/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-  }
-
-  async function bulkEmail() {
-    const ids = Array.from(selected);
-    await fetch("/api/affiliates/email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ affiliate_ids: ids, brand_id: brandId }),
-    });
-    setSelected(new Set());
-  }
-
-  function copyLink(code: string, id: string) {
-    navigator.clipboard.writeText(`https://shop.example.com?ref=${code}`);
-    setCopied(id);
-    setTimeout(() => setCopied(null), 2000);
-  }
-
-  function toggleSelect(id: string) {
-    setSelected(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {selected.size > 0 && (
-            <button onClick={bulkEmail} className="btn-outline text-xs gap-1.5">
-              <Mail className="w-3.5 h-3.5" /> Email {selected.size} selected
-            </button>
-          )}
-        </div>
-        <button onClick={() => setShowInvite(true)} className="btn-primary text-xs gap-1.5">
-          <Plus className="w-3.5 h-3.5" /> Invite Affiliate
-        </button>
-      </div>
-
-      <div className="card p-0 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-surface-tint text-xs text-ink-muted border-b border-surface-border">
-            <tr>
-              <th className="p-3 w-8"><input type="checkbox" className="rounded" onChange={e => setSelected(e.target.checked ? new Set(affiliates.map(a => a.id)) : new Set())} /></th>
-              <th className="p-3 text-left">Name</th>
-              <th className="p-3 text-left">Code</th>
-              <th className="p-3 text-left">Program</th>
-              <th className="p-3 text-right">Clicks</th>
-              <th className="p-3 text-right">Orders</th>
-              <th className="p-3 text-right">Revenue</th>
-              <th className="p-3 text-right">Commission</th>
-              <th className="p-3 text-left">Status</th>
-              <th className="p-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {affiliates.map(aff => {
-              const stats = convsByAff[aff.id] ?? { revenue: 0, commission: 0, orders: 0, history: [] };
-              const prog = programs.find(p => p.id === aff.program_id);
-              const isExpanded = expanded === aff.id;
-              const referralLink = `https://shop.example.com?ref=${aff.discount_code ?? aff.referral_code ?? aff.id}`;
-              return (
-                <>
-                  <tr key={aff.id} className="table-row-hover">
-                    <td className="p-3"><input type="checkbox" checked={selected.has(aff.id)} onChange={() => toggleSelect(aff.id)} className="rounded" /></td>
-                    <td className="p-3">
-                      <div className="font-medium text-ink">{aff.name}</div>
-                      <div className="text-[11px] text-ink-muted">{aff.email}</div>
-                    </td>
-                    <td className="p-3"><code className="text-xs bg-surface-tint px-1.5 py-0.5 rounded font-mono">{aff.discount_code ?? aff.referral_code ?? "—"}</code></td>
-                    <td className="p-3 text-xs text-ink-muted">{prog?.name ?? "Default"}</td>
-                    <td className="p-3 text-right text-xs">{formatNumber(aff.click_count ?? 0)}</td>
-                    <td className="p-3 text-right text-xs">{stats.orders}</td>
-                    <td className="p-3 text-right text-xs font-medium">{formatMoney(stats.revenue)}</td>
-                    <td className="p-3 text-right text-xs font-semibold text-primary">{formatMoney(stats.commission)}</td>
-                    <td className="p-3">
-                      <select
-                        defaultValue={aff.status}
-                        onChange={e => updateStatus(aff.id, e.target.value)}
-                        className="text-xs border border-surface-border rounded-lg px-2 py-1 bg-surface outline-none"
-                      >
-                        <option value="active">Active</option>
-                        <option value="paused">Paused</option>
-                        <option value="banned">Banned</option>
-                      </select>
-                    </td>
-                    <td className="p-3">
-                      <button onClick={() => setExpanded(isExpanded ? null : aff.id)} className="text-ink-muted hover:text-ink">
-                        {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                      </button>
-                    </td>
-                  </tr>
-                  {isExpanded && (
-                    <tr key={`${aff.id}-expanded`} className="bg-surface-tint">
-                      <td colSpan={10} className="p-4">
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-ink-muted">Referral link:</span>
-                            <code className="text-xs font-mono bg-white border border-surface-border px-2 py-1 rounded-lg flex-1 truncate">{referralLink}</code>
-                            <button onClick={() => copyLink(aff.discount_code ?? aff.id, aff.id)} className="btn-outline text-xs gap-1">
-                              <Copy className="w-3 h-3" />
-                              {copied === aff.id ? "Copied!" : "Copy"}
-                            </button>
-                          </div>
-                          {aff.custom_link && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-ink-muted">Custom link:</span>
-                              <code className="text-xs font-mono bg-white border border-surface-border px-2 py-1 rounded-lg">{aff.custom_link}</code>
-                            </div>
-                          )}
-                          <div>
-                            <p className="text-xs font-semibold text-ink-muted mb-2">Conversion history ({stats.history.length})</p>
-                            {stats.history.length === 0 ? (
-                              <p className="text-xs text-ink-subtle">No conversions yet.</p>
-                            ) : (
-                              <table className="w-full text-xs">
-                                <thead><tr className="text-left text-ink-muted"><th className="pb-1">Order</th><th>Date</th><th>Order Value</th><th>Commission</th></tr></thead>
-                                <tbody>
-                                  {stats.history.slice(0, 5).map((c: any, i: number) => (
-                                    <tr key={i} className="border-t border-surface-border">
-                                      <td className="py-1">{c.order_id ?? "—"}</td>
-                                      <td>{(c.converted_at ?? "").slice(0, 10)}</td>
-                                      <td>{formatMoney(c.order_value)}</td>
-                                      <td className="font-semibold text-primary">{formatMoney(c.commission_amount)}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </>
-              );
-            })}
-          </tbody>
-        </table>
-        {affiliates.length === 0 && (
-          <div className="text-center py-12 text-ink-muted text-sm">No affiliates yet. Invite your first one!</div>
-        )}
-      </div>
-
-      {showInvite && <InviteModal programs={programs} onClose={() => setShowInvite(false)} brandId={brandId} />}
+      {selectedProgram && <ProgramSlideOver program={selectedProgram} onClose={() => setSelectedProgram(null)} />}
     </div>
   );
 }
 
-// ─── Programs Tab ─────────────────────────────────────────────────────────────
-
-function ProgramsTab({ programs, affiliates, brandId }: Pick<Props, "programs" | "affiliates" | "brandId">) {
-  const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ name: "", description: "", commission_type: "pct", commission_pct: "", cookie_days: "30", min_payout: "", payout_method: "bank", require_approval: false, mlm_enabled: false });
-  const [loading, setLoading] = useState(false);
-
-  async function createProgram() {
-    setLoading(true);
-    await fetch("/api/affiliates/invite", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "program", ...form, brand_id: brandId }),
-    });
-    setLoading(false);
-    setShowCreate(false);
-  }
+function ProgramSlideOver({ program, onClose }: { program: any; onClose: () => void }) {
+  const [tab, setTab] = useState("Commission");
+  const [commissionRule, setCommissionRule] = useState("simple");
+  const [commissionType, setCommissionType] = useState("percent");
+  const [amount, setAmount] = useState("10");
+  const [newCustomer, setNewCustomer] = useState(false);
+  const [lifetime, setLifetime] = useState(false);
+  const [excludeTax, setExcludeTax] = useState(true);
+  const [excludeShipping, setExcludeShipping] = useState(true);
+  const [excludeShippingTax, setExcludeShippingTax] = useState(true);
+  const [excludeTip, setExcludeTip] = useState(true);
+  const [excludeSelf, setExcludeSelf] = useState(false);
+  const [applyTo, setApplyTo] = useState("none");
+  const [status, setStatus] = useState(program.status === "active");
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <button onClick={() => setShowCreate(true)} className="btn-primary text-xs gap-1.5">
-          <Plus className="w-3.5 h-3.5" /> Create Program
-        </button>
-      </div>
-
-      <div className="grid gap-4">
-        {programs.length === 0 && (
-          <div className="card text-center py-12 text-ink-muted text-sm">No programs yet. Create your first affiliate program.</div>
-        )}
-        {programs.map(prog => {
-          const count = affiliates.filter(a => a.program_id === prog.id).length;
-          return (
-            <div key={prog.id} className="card flex items-center justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-ink">{prog.name}</span>
-                  {prog.is_active ? <span className="badge-success">Active</span> : <span className="badge-neutral">Inactive</span>}
-                </div>
-                {prog.description && <p className="text-xs text-ink-muted mb-2">{prog.description}</p>}
-                <div className="flex items-center gap-4 text-xs text-ink-muted">
-                  <span><b className="text-ink">{prog.commission_pct ?? prog.commission_value}%</b> commission</span>
-                  <span><b className="text-ink">{prog.cookie_days ?? 30}</b> cookie days</span>
-                  <span><b className="text-ink">{count}</b> affiliates</span>
-                  {prog.min_payout && <span>Min payout: <b className="text-ink">{formatMoney(prog.min_payout)}</b></span>}
+    <SlideOver title={program.name} onClose={onClose} width="w-[560px]">
+      <InnerTabs tabs={["Commission", "Display", "Affiliates", "Email Templates"]} active={tab} onChange={setTab} />
+      <div className="p-5 space-y-5">
+        {tab === "Commission" && (
+          <>
+            {/* General info */}
+            <Card className="space-y-4">
+              <p className="font-semibold text-gray-900 text-sm">General information</p>
+              <div className="flex items-center gap-4">
+                <div className="flex-1"><Input value={program.name} placeholder="Program name" /></div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-700">Status</span>
+                  <Toggle on={status} onChange={setStatus} />
                 </div>
               </div>
-              <button className="text-ink-muted hover:text-ink">
-                {prog.is_active ? <ToggleRight className="w-6 h-6 text-emerald-500" /> : <ToggleLeft className="w-6 h-6" />}
-              </button>
+              <div>
+                <Textarea placeholder="Description (optional)" rows={2} />
+                <p className="text-xs text-gray-400 italic mt-1">This is displayed on the affiliate account and registration page.</p>
+              </div>
+            </Card>
+
+            {/* Commission rules */}
+            <Card className="space-y-3">
+              <div>
+                <p className="font-semibold text-gray-900 text-sm">Commission rules</p>
+                <p className="text-xs text-gray-500">Set a base commission rate that affiliates earn for every referral.</p>
+              </div>
+              <div><Label>Default commission rule</Label>
+                <Select value={commissionRule} onChange={setCommissionRule} options={[{ value: "simple", label: "Simple (Fixed Commission)" }, { value: "tiered", label: "Tiered" }, { value: "product", label: "Product-based" }]} />
+              </div>
+              <div className="flex gap-3 items-end">
+                <div className="flex-1"><Label>Type</Label>
+                  <Select value={commissionType} onChange={setCommissionType} options={[{ value: "percent", label: "Percent of sale" }, { value: "fixed", label: "Fixed amount" }]} />
+                </div>
+                <div className="flex-1"><Label>Amount</Label>
+                  <div className="relative"><Input type="number" value={amount} onChange={setAmount} /><span className="absolute right-3 top-2.5 text-sm text-gray-400">%</span></div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Standalone toggles */}
+            <div className="space-y-3">
+              {[["New customer commission", newCustomer, setNewCustomer], ["Lifetime commissions", lifetime, setLifetime]].map(([label, val, setter]: any) => (
+                <div key={label as string} className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm text-gray-700">{label as string}</span>
+                    <Info size={13} className="text-gray-400" />
+                  </div>
+                  <Toggle on={val as boolean} onChange={setter as any} />
+                </div>
+              ))}
             </div>
-          );
-        })}
+
+            {/* Customer incentives */}
+            <Card className="space-y-3">
+              <div>
+                <p className="font-semibold text-gray-900 text-sm">Customer incentives</p>
+                <p className="text-xs text-gray-500">Reward customers when they shop through affiliate links.</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-800">Auto-discount for customers</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Automatically apply discounts via affiliate links to drive sales and boost conversions.</p>
+                </div>
+                <span className="bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full mt-0.5">Inactive</span>
+                <OutlineBtn className="text-xs px-3 py-1.5 mt-0.5">Set up</OutlineBtn>
+              </div>
+            </Card>
+
+            {/* Commission calculation */}
+            <Card className="space-y-4">
+              <div>
+                <p className="font-semibold text-gray-900 text-sm">Commission calculation</p>
+                <p className="text-xs text-gray-500">Customize how products, shipping, and taxes impact commission calculations.</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Excluded products/collections</p>
+                <p className="text-xs text-gray-500">Select products or collections to exclude from commission calculation.</p>
+                <Select value={applyTo} onChange={setApplyTo} options={[{ value: "none", label: "None" }, { value: "products", label: "Products" }, { value: "collections", label: "Collections" }]} />
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Shipping, taxes and other fees</p>
+                {[["Exclude product tax", excludeTax, setExcludeTax], ["Exclude shipping", excludeShipping, setExcludeShipping], ["Exclude shipping tax", excludeShippingTax, setExcludeShippingTax], ["Exclude tip", excludeTip, setExcludeTip]].map(([label, val, setter]: any) => (
+                  <div key={label as string} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700">{label as string}</span>
+                    <Toggle on={val as boolean} onChange={setter as any} />
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm text-gray-700">Exclude self-referrals</span>
+                  <Info size={13} className="text-gray-400" />
+                </div>
+                <Toggle on={excludeSelf} onChange={setExcludeSelf} />
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Payment methods</p>
+                <Textarea placeholder="Set up specific payment methods for each program." rows={2} />
+                <p className="text-xs text-gray-400">Set up specific payment methods for each program.</p>
+                <Select value="" onChange={() => {}} options={[{ value: "", label: "None (Default payment method)" }]} />
+                <p className="text-xs text-gray-400">The system will automatically choose this method as default for new registered affiliates.</p>
+              </div>
+            </Card>
+
+            <PrimaryBtn className="w-full">Save changes</PrimaryBtn>
+          </>
+        )}
+
+        {tab === "Display" && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">Configure how this program appears on the registration page.</p>
+            <div><Label>Banner image URL</Label><Input placeholder="https://..." /></div>
+            <div><Label>Welcome message</Label><Textarea placeholder="Welcome message for affiliates..." /></div>
+            <PrimaryBtn>Save display settings</PrimaryBtn>
+          </div>
+        )}
+
+        {tab === "Affiliates" && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-500 mb-3">Affiliates enrolled in this program:</p>
+            {mockAffiliates.filter(a => a.program === program.name).map(a => (
+              <div key={a.id} className="flex items-center justify-between py-2 border-b border-gray-100">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{a.name}</p>
+                  <p className="text-xs text-gray-500">{a.email}</p>
+                </div>
+                <StatusBadge status={a.status} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab === "Email Templates" && (
+          <div className="space-y-3">
+            {["Approval Email", "Welcome Email", "New Coupon", "Monthly Report"].map(t => (
+              <div key={t} className="flex items-center justify-between py-3 border-b border-gray-100">
+                <span className="text-sm font-medium text-gray-800">{t}</span>
+                <div className="flex gap-2">
+                  <OutlineBtn className="text-xs px-3 py-1.5">Edit</OutlineBtn>
+                  <OutlineBtn className="text-xs px-3 py-1.5">Send Test</OutlineBtn>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </SlideOver>
+  );
+}
+
+// ─── TAB 2: Affiliates ────────────────────────────────────────────────────────
+
+function AffiliatesTab() {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [showAdd, setShowAdd] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [showProducts, setShowProducts] = useState(false);
+  const [showCustomers, setShowCustomers] = useState(false);
+  const [selectedAffiliate, setSelectedAffiliate] = useState<any>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [newAffiliate, setNewAffiliate] = useState({ firstName: "", lastName: "", email: "", program: "Default Program", commission: "", status: "active", sendInvite: true });
+
+  const statuses = ["All", "Active", "Pending", "Paused", "Banned"];
+  const filtered = mockAffiliates.filter(a => {
+    if (statusFilter !== "All" && a.status !== statusFilter.toLowerCase()) return false;
+    if (search && !a.name.toLowerCase().includes(search.toLowerCase()) && !a.email.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-5 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search affiliates..." className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <div className="flex gap-1">
+          {statuses.map(s => (
+            <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${statusFilter === s ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>{s}</button>
+          ))}
+        </div>
+        <OutlineBtn onClick={() => setShowImport(true)}><Upload size={13} className="inline mr-1" />Import</OutlineBtn>
+        <PrimaryBtn onClick={() => setShowAdd(true)}><Plus size={13} className="inline mr-1" />Add Affiliate</PrimaryBtn>
+        <OutlineBtn onClick={() => setShowProducts(true)}>Connect Products</OutlineBtn>
+        <OutlineBtn onClick={() => setShowCustomers(true)}>Connect Customers</OutlineBtn>
       </div>
 
-      {showCreate && (
-        <Modal title="Create Program" onClose={() => setShowCreate(false)}>
-          <div>
-            <label className="label">Program Name</label>
-            <input className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Influencer Program" />
+      <Card className="p-0 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              {["", "Name", "Program", "Status", "Clicks", "Referrals", "Revenue", "Commission", "Last active", ""].map((h, i) => (
+                <th key={i} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {filtered.map(a => (
+              <tr key={a.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedAffiliate(a)}>
+                <td className="px-4 py-3" onClick={e => e.stopPropagation()}><input type="checkbox" className="rounded border-gray-300" /></td>
+                <td className="px-4 py-3">
+                  <div className="font-medium text-gray-900">{a.name}</div>
+                  <div className="text-xs text-gray-500">{a.email}</div>
+                </td>
+                <td className="px-4 py-3 text-gray-600 text-xs">{a.program}</td>
+                <td className="px-4 py-3"><StatusBadge status={a.status} /></td>
+                <td className="px-4 py-3 text-gray-700">{a.clicks}</td>
+                <td className="px-4 py-3 text-gray-700">{a.referrals}</td>
+                <td className="px-4 py-3 text-gray-700">${a.revenue.toLocaleString()}</td>
+                <td className="px-4 py-3 text-gray-700">${a.commission}</td>
+                <td className="px-4 py-3 text-gray-500 text-xs">{a.lastActive}</td>
+                <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                  <div className="relative">
+                    <button onClick={() => setOpenMenu(openMenu === a.id ? null : a.id)} className="p-1 rounded hover:bg-gray-100">
+                      <MoreHorizontal size={16} className="text-gray-400" />
+                    </button>
+                    {openMenu === a.id && (
+                      <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
+                        {["View Profile", "Send email", "Change status", "Remove"].map(item => (
+                          <button key={item} className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50" onClick={() => { if (item === "View Profile") setSelectedAffiliate(a); setOpenMenu(null); }}>{item}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+
+      {showAdd && (
+        <Modal title="Add Affiliate" onClose={() => setShowAdd(false)}>
+          <div className="grid grid-cols-2 gap-4">
+            <div><Label>First name</Label><Input value={newAffiliate.firstName} onChange={v => setNewAffiliate(p => ({ ...p, firstName: v }))} /></div>
+            <div><Label>Last name</Label><Input value={newAffiliate.lastName} onChange={v => setNewAffiliate(p => ({ ...p, lastName: v }))} /></div>
           </div>
-          <div>
-            <label className="label">Description</label>
-            <textarea className="input resize-none" rows={2} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+          <div><Label>Email</Label><Input value={newAffiliate.email} onChange={v => setNewAffiliate(p => ({ ...p, email: v }))} type="email" /></div>
+          <div><Label>Program</Label>
+            <Select value={newAffiliate.program} onChange={v => setNewAffiliate(p => ({ ...p, program: v }))} options={mockPrograms.map(p => ({ value: p.name, label: p.name }))} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Commission Type</label>
-              <select className="input" value={form.commission_type} onChange={e => setForm(f => ({ ...f, commission_type: e.target.value }))}>
-                <option value="pct">Percentage</option>
-                <option value="fixed">Fixed</option>
-              </select>
+          <div><Label>Commission % override</Label><Input type="number" value={newAffiliate.commission} onChange={v => setNewAffiliate(p => ({ ...p, commission: v }))} placeholder="Leave blank to use program default" /></div>
+          <div><Label>Status</Label>
+            <Select value={newAffiliate.status} onChange={v => setNewAffiliate(p => ({ ...p, status: v }))} options={[{ value: "active", label: "Active" }, { value: "pending", label: "Pending" }]} />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-700">Send invite email</span>
+            <Toggle on={newAffiliate.sendInvite} onChange={v => setNewAffiliate(p => ({ ...p, sendInvite: v }))} />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <OutlineBtn onClick={() => setShowAdd(false)}>Cancel</OutlineBtn>
+            <PrimaryBtn onClick={() => setShowAdd(false)}>Add Affiliate</PrimaryBtn>
+          </div>
+        </Modal>
+      )}
+
+      {showImport && (
+        <Modal title="Import Affiliates" onClose={() => setShowImport(false)}>
+          <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
+            <Upload size={28} className="mx-auto text-gray-400 mb-2" />
+            <p className="text-sm text-gray-600 font-medium">Drop CSV file here or click to browse</p>
+            <p className="text-xs text-gray-400 mt-1">Supports .csv format</p>
+          </div>
+          <button className="text-sm text-indigo-600 hover:underline flex items-center gap-1"><Download size={13} />Download template</button>
+          <div><Label>Field mapping</Label>
+            <div className="space-y-2">
+              {["Email", "First name", "Last name", "Program"].map(f => (
+                <div key={f} className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600 w-24">{f}</span>
+                  <Select value="" onChange={() => {}} options={[{ value: "", label: "Select column..." }]} />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <OutlineBtn onClick={() => setShowImport(false)}>Cancel</OutlineBtn>
+            <PrimaryBtn onClick={() => setShowImport(false)}>Import</PrimaryBtn>
+          </div>
+        </Modal>
+      )}
+
+      {showProducts && (
+        <Modal title="Connect Products" onClose={() => setShowProducts(false)}>
+          <div className="relative"><Search size={14} className="absolute left-3 top-2.5 text-gray-400" /><input placeholder="Search products..." className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg" /></div>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {["Summer Collection T-Shirt", "Classic Hoodie", "Slim Fit Jeans", "Sneakers Pro", "Canvas Bag"].map(p => (
+              <label key={p} className="flex items-center gap-3 py-2 border-b border-gray-100 cursor-pointer">
+                <input type="checkbox" className="rounded border-gray-300" /><span className="text-sm text-gray-700">{p}</span>
+              </label>
+            ))}
+          </div>
+          <div><Label>Commission %</Label><Input type="number" placeholder="Override commission for selected products" /></div>
+          <div className="flex justify-end gap-3"><OutlineBtn onClick={() => setShowProducts(false)}>Cancel</OutlineBtn><PrimaryBtn onClick={() => setShowProducts(false)}>Save</PrimaryBtn></div>
+        </Modal>
+      )}
+
+      {showCustomers && (
+        <Modal title="Connect Customers" onClose={() => setShowCustomers(false)}>
+          <div className="relative"><Search size={14} className="absolute left-3 top-2.5 text-gray-400" /><input placeholder="Search by email..." className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg" /></div>
+          <div className="space-y-2">
+            {["alice@example.com", "bob@example.com", "carol@example.com"].map(e => (
+              <div key={e} className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">{e}</span>
+                <OutlineBtn className="text-xs px-2 py-1">Link as affiliate</OutlineBtn>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end"><OutlineBtn onClick={() => setShowCustomers(false)}>Close</OutlineBtn></div>
+        </Modal>
+      )}
+
+      {selectedAffiliate && <AffiliateSlideOver affiliate={selectedAffiliate} onClose={() => setSelectedAffiliate(null)} />}
+    </div>
+  );
+}
+
+function AffiliateSlideOver({ affiliate, onClose }: { affiliate: any; onClose: () => void }) {
+  const [tab, setTab] = useState("Stats");
+  const initials = affiliate.name.split(" ").map((n: string) => n[0]).join("").toUpperCase();
+
+  return (
+    <SlideOver title="" onClose={onClose}>
+      <div className="p-5 border-b border-gray-200">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg">{initials}</div>
+          <div className="flex-1">
+            <p className="font-semibold text-gray-900 text-base">{affiliate.name}</p>
+            <p className="text-sm text-gray-500">{affiliate.email}</p>
+            <div className="flex items-center gap-2 mt-1"><StatusBadge status={affiliate.status} /><span className="text-xs text-gray-400">{affiliate.program}</span></div>
+          </div>
+        </div>
+      </div>
+      <InnerTabs tabs={["Stats", "Links & Coupons", "Commissions", "Network"]} active={tab} onChange={setTab} />
+      <div className="p-5">
+        {tab === "Stats" && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-3">
+              {[["Clicks", affiliate.clicks], ["Referrals", affiliate.referrals], ["Revenue", `$${affiliate.revenue.toLocaleString()}`], ["Commission", `$${affiliate.commission}`]].map(([label, val]) => (
+                <div key={label as string} className="bg-gray-50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500 mb-1">{label as string}</p>
+                  <p className="text-lg font-bold text-gray-900">{val as string}</p>
+                </div>
+              ))}
             </div>
             <div>
-              <label className="label">Commission %</label>
-              <input className="input" type="number" value={form.commission_pct} onChange={e => setForm(f => ({ ...f, commission_pct: e.target.value }))} placeholder="15" />
+              <p className="text-sm font-medium text-gray-700 mb-2">Revenue last 30 days</p>
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={chartData.slice(0, 14)}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="day" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="revenue" fill="#6366f1" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+        )}
+        {tab === "Links & Coupons" && (
+          <div className="space-y-4">
             <div>
-              <label className="label">Cookie Days</label>
-              <input className="input" type="number" value={form.cookie_days} onChange={e => setForm(f => ({ ...f, cookie_days: e.target.value }))} />
+              <Label>Affiliate link</Label>
+              <div className="flex items-center gap-2">
+                <input readOnly value={`https://store.com?ref=${affiliate.id}`} className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50" />
+                <button className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"><Copy size={14} /></button>
+              </div>
             </div>
             <div>
-              <label className="label">Min Payout</label>
-              <input className="input" type="number" value={form.min_payout} onChange={e => setForm(f => ({ ...f, min_payout: e.target.value }))} placeholder="50" />
-            </div>
-            <div>
-              <label className="label">Payout Method</label>
-              <select className="input" value={form.payout_method} onChange={e => setForm(f => ({ ...f, payout_method: e.target.value }))}>
-                <option value="bank">Bank Transfer</option>
-                <option value="paypal">PayPal</option>
-                <option value="crypto">Crypto</option>
-              </select>
+              <Label>Coupon code</Label>
+              <div className="flex items-center gap-2">
+                <input readOnly value={`AFF${affiliate.id}SAVE10`} className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50" />
+                <button className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"><Copy size={14} /></button>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={form.require_approval} onChange={e => setForm(f => ({ ...f, require_approval: e.target.checked }))} className="rounded" />
-              Require approval
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={form.mlm_enabled} onChange={e => setForm(f => ({ ...f, mlm_enabled: e.target.checked }))} className="rounded" />
-              MLM / Sub-affiliates
-            </label>
+        )}
+        {tab === "Commissions" && (
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-gray-700">Pending commissions</p>
+            {[{ order: "R001", amount: 18.9 }, { order: "R003", amount: 62.4 }].map(c => (
+              <div key={c.order} className="flex items-center justify-between py-2 border-b border-gray-100">
+                <div><p className="text-sm font-medium text-gray-900">Order #{c.order}</p><p className="text-xs text-gray-500">${c.amount}</p></div>
+                <div className="flex gap-2">
+                  <button className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-lg font-medium hover:bg-green-200">Approve</button>
+                  <button className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-lg font-medium hover:bg-red-200">Deny</button>
+                </div>
+              </div>
+            ))}
           </div>
-          <button className="btn-primary w-full" onClick={createProgram} disabled={loading || !form.name}>
-            {loading ? "Creating…" : "Create Program"}
-          </button>
+        )}
+        {tab === "Network" && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-700 mb-3">Sub-affiliates</p>
+            {["Level 2: John Doe (john@ex.com)", "Level 2: Jane Smith (jane@ex.com)", "  Level 3: Mike Johnson (mike@ex.com)"].map((item, i) => (
+              <div key={i} className={`text-sm text-gray-700 py-1.5 border-b border-gray-100 ${item.startsWith(" ") ? "pl-6" : ""}`}>{item.trim()}</div>
+            ))}
+          </div>
+        )}
+      </div>
+    </SlideOver>
+  );
+}
+
+// ─── TAB 3: Referrals ─────────────────────────────────────────────────────────
+
+function ReferralsTab() {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [selectedReferral, setSelectedReferral] = useState<any>(null);
+
+  const statuses = ["All", "Pending", "Approved", "Denied"];
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-5 flex-wrap">
+        <div className="relative flex-1 min-w-[160px]">
+          <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <div className="flex gap-1">
+          {statuses.map(s => (
+            <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-1.5 text-xs font-medium rounded-lg ${statusFilter === s ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>{s}</button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <Calendar size={14} className="text-gray-400" />
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          <span className="text-gray-400 text-sm">–</span>
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <PrimaryBtn onClick={() => setShowAdd(true)}><Plus size={13} className="inline mr-1" />Add Referral</PrimaryBtn>
+        <OutlineBtn onClick={() => setShowImport(true)}><Upload size={13} className="inline mr-1" />Import</OutlineBtn>
+      </div>
+
+      <Card className="p-0 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              {["Order #", "Customer", "Affiliate", "Date", "Order value", "Commission", "Status", "Actions"].map(h => (
+                <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {mockReferrals.map(r => (
+              <tr key={r.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedReferral(r)}>
+                <td className="px-4 py-3 font-medium text-indigo-600">#{r.id}</td>
+                <td className="px-4 py-3 text-gray-700">{r.customer}</td>
+                <td className="px-4 py-3 text-gray-700">{r.affiliate}</td>
+                <td className="px-4 py-3 text-gray-500">{r.date}</td>
+                <td className="px-4 py-3 text-gray-700">${r.value}</td>
+                <td className="px-4 py-3 text-gray-700">${r.commission}</td>
+                <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                  {r.status === "pending" && (
+                    <div className="flex gap-2">
+                      <button className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-lg font-medium hover:bg-green-200">Approve</button>
+                      <button className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-lg font-medium hover:bg-red-200">Deny</button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+
+      {showAdd && (
+        <Modal title="Add Referral" onClose={() => setShowAdd(false)}>
+          <div><Label>Affiliate</Label><Select value="" onChange={() => {}} options={mockAffiliates.map(a => ({ value: a.id, label: a.name }))} /></div>
+          <div><Label>Order ID</Label><Input placeholder="e.g. #1234" /></div>
+          <div><Label>Commission ($)</Label><Input type="number" placeholder="0.00" /></div>
+          <div><Label>Date</Label><Input type="date" /></div>
+          <div className="flex justify-end gap-3"><OutlineBtn onClick={() => setShowAdd(false)}>Cancel</OutlineBtn><PrimaryBtn onClick={() => setShowAdd(false)}>Add Referral</PrimaryBtn></div>
+        </Modal>
+      )}
+
+      {showImport && (
+        <Modal title="Import Referrals" onClose={() => setShowImport(false)}>
+          <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center"><Upload size={28} className="mx-auto text-gray-400 mb-2" /><p className="text-sm text-gray-600">Drop CSV file here</p></div>
+          <div className="flex justify-end gap-3"><OutlineBtn onClick={() => setShowImport(false)}>Cancel</OutlineBtn><PrimaryBtn onClick={() => setShowImport(false)}>Import</PrimaryBtn></div>
+        </Modal>
+      )}
+
+      {selectedReferral && (
+        <Modal title={`Referral #${selectedReferral.id}`} onClose={() => setSelectedReferral(null)} wide>
+          <div className="grid grid-cols-2 gap-4">
+            <div><p className="text-xs text-gray-500">Order ID</p><p className="font-medium">#{selectedReferral.id}</p></div>
+            <div><p className="text-xs text-gray-500">Date</p><p className="font-medium">{selectedReferral.date}</p></div>
+            <div><p className="text-xs text-gray-500">Customer</p><p className="font-medium">{selectedReferral.customer}</p></div>
+            <div><p className="text-xs text-gray-500">Affiliate</p><p className="font-medium">{selectedReferral.affiliate}</p></div>
+          </div>
+          <div className="border-t border-gray-200 pt-4 space-y-2">
+            <p className="text-sm font-medium text-gray-700">Commission breakdown</p>
+            <div className="flex justify-between text-sm"><span className="text-gray-500">Base rate (10%)</span><span>${(selectedReferral.value * 0.1).toFixed(2)}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-gray-500">Shipping excluded</span><span>-$0.00</span></div>
+            <div className="flex justify-between text-sm font-semibold"><span>Final commission</span><span>${selectedReferral.commission}</span></div>
+          </div>
+          <div className="border-t border-gray-200 pt-4">
+            <p className="text-sm font-medium text-gray-700 mb-3">Customer journey</p>
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-full"><ArrowUpRight size={11} />Clicked link</div>
+              <ChevronRight size={12} className="text-gray-400" />
+              <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-full"><Package size={11} />Added to cart</div>
+              <ChevronRight size={12} className="text-gray-400" />
+              <div className="flex items-center gap-1 bg-green-50 px-2 py-1 rounded-full"><CheckCircle2 size={11} />Purchased</div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            {selectedReferral.status === "pending" && <>
+              <button className="px-4 py-2 bg-green-100 text-green-700 text-sm rounded-lg font-medium hover:bg-green-200">Approve</button>
+              <button className="px-4 py-2 bg-red-100 text-red-700 text-sm rounded-lg font-medium hover:bg-red-200">Deny</button>
+            </>}
+            <OutlineBtn>Edit commission</OutlineBtn>
+          </div>
         </Modal>
       )}
     </div>
   );
 }
 
-// ─── Payouts Tab ──────────────────────────────────────────────────────────────
+// ─── TAB 4: Payments ─────────────────────────────────────────────────────────
 
-function PayoutsTab({ payouts, affiliates, brandId }: Pick<Props, "payouts" | "affiliates" | "brandId">) {
-  const [loading, setLoading] = useState<string | null>(null);
+function PaymentsTab() {
+  const [showPay, setShowPay] = useState<any>(null);
+  const [payMethod, setPayMethod] = useState("paypal");
+  const [autoPayoutEnabled, setAutoPayoutEnabled] = useState(false);
+  const [schedule, setSchedule] = useState("approval");
+  const [threshold, setThreshold] = useState("50");
 
-  const pending = payouts.filter(p => p.status === "pending");
-  const totalPending = pending.reduce((s, p) => s + Number(p.amount ?? 0), 0);
-  const thisMonth = payouts
-    .filter(p => (p.period ?? "").startsWith(new Date().toISOString().slice(0, 7)))
-    .reduce((s, p) => s + Number(p.amount ?? 0), 0);
-
-  async function markPaid(id: string) {
-    setLoading(id);
-    await fetch("/api/affiliates/payout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ payout_id: id, action: "mark_paid", brand_id: brandId }),
-    });
-    setLoading(null);
-  }
-
-  async function generateReport() {
-    await fetch("/api/affiliates/payout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "generate_report", brand_id: brandId }),
-    });
-  }
+  const totalUnpaid = mockUnpaid.reduce((s, u) => s + u.amount, 0);
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="card">
-          <div className="kpi-label">Total Pending</div>
-          <div className="kpi-value text-amber-600">{formatMoney(totalPending)}</div>
-          <div className="text-xs text-ink-muted mt-1">{pending.length} affiliates awaiting payment</div>
-        </div>
-        <div className="card">
-          <div className="kpi-label">This Month</div>
-          <div className="kpi-value">{formatMoney(thisMonth)}</div>
-          <div className="text-xs text-ink-muted mt-1">Total payouts this month</div>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Unpaid commissions */}
+        <Card className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Unpaid commissions</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">${totalUnpaid.toLocaleString()}</p>
+            </div>
+            <div className="flex gap-2">
+              <OutlineBtn><Download size={13} className="inline mr-1" />Download Invoices</OutlineBtn>
+              <PrimaryBtn>Pay All</PrimaryBtn>
+            </div>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {mockUnpaid.map(u => (
+              <div key={u.affiliate} className="flex items-center justify-between py-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{u.affiliate}</p>
+                  <p className="text-xs text-gray-500">{u.referrals} referrals</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-semibold text-gray-900">${u.amount}</span>
+                  <PrimaryBtn onClick={() => setShowPay(u)} className="px-3 py-1.5 text-xs">Pay</PrimaryBtn>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
 
-      <div className="flex justify-end">
-        <button onClick={generateReport} className="btn-outline text-xs gap-1.5">
-          <Download className="w-3.5 h-3.5" /> Generate Payout Report
-        </button>
-      </div>
-
-      <div className="card p-0 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-surface-tint text-xs text-ink-muted border-b border-surface-border">
-            <tr>
-              <th className="p-3 text-left">Affiliate</th>
-              <th className="p-3 text-left">Period</th>
-              <th className="p-3 text-right">Amount</th>
-              <th className="p-3 text-left">Method</th>
-              <th className="p-3 text-left">Status</th>
-              <th className="p-3 text-left">Paid Date</th>
-              <th className="p-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {payouts.map(p => {
-              const aff = affiliates.find(a => a.id === p.affiliate_id);
-              return (
-                <tr key={p.id} className="table-row-hover">
-                  <td className="p-3">
-                    <div className="font-medium text-ink text-xs">{aff?.name ?? "Unknown"}</div>
-                    <div className="text-[10px] text-ink-muted">{aff?.email}</div>
-                  </td>
-                  <td className="p-3 text-xs">{p.period ?? "—"}</td>
-                  <td className="p-3 text-right text-xs font-semibold">{formatMoney(p.amount)}</td>
-                  <td className="p-3 text-xs capitalize">{p.payout_method ?? "bank"}</td>
-                  <td className="p-3">{statusBadge(p.status ?? "pending")}</td>
-                  <td className="p-3 text-xs text-ink-muted">{p.paid_at ? (p.paid_at ?? "").slice(0, 10) : "—"}</td>
-                  <td className="p-3">
-                    {p.status === "pending" && (
-                      <button
-                        onClick={() => markPaid(p.id)}
-                        disabled={loading === p.id}
-                        className="btn-outline text-xs py-1 px-2"
-                      >
-                        {loading === p.id ? "…" : "Mark Paid"}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {payouts.length === 0 && (
-          <div className="text-center py-12 text-ink-muted text-sm">No payouts yet.</div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Fraud Tab ────────────────────────────────────────────────────────────────
-
-function FraudTab({ affiliates, clicks, conversions }: Pick<Props, "affiliates" | "clicks" | "conversions">) {
-  const flagged = useMemo(() => {
-    return affiliates
-      .filter(a => (a.fraud_score ?? 0) > 30)
-      .map(a => ({
-        ...a,
-        flags: [
-          a.self_referral_count > 0 && "Self-referrals detected",
-          a.same_ip_clicks > 5 && "Same-IP click cluster",
-          a.fraud_score > 70 && "High fraud score",
-        ].filter(Boolean),
-      }));
-  }, [affiliates]);
-
-  async function blockAffiliate(id: string) {
-    await fetch(`/api/affiliates/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "banned" }),
-    });
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="card border-l-4 border-l-red-400 bg-red-50">
-        <div className="flex items-center gap-2 mb-1">
-          <AlertTriangle className="w-4 h-4 text-red-500" />
-          <span className="font-semibold text-red-700 text-sm">Fraud Detection</span>
-        </div>
-        <p className="text-xs text-red-600">Affiliates with fraud_score &gt; 30 appear here. Signals: same-IP clicks, self-referrals, unusual conversion spikes.</p>
-      </div>
-
-      {flagged.length === 0 ? (
-        <div className="card text-center py-12">
-          <Shield className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-          <p className="font-semibold text-ink">No fraud detected</p>
-          <p className="text-xs text-ink-muted mt-1">All affiliates are below the fraud threshold.</p>
-        </div>
-      ) : (
-        <div className="card p-0 overflow-hidden">
+        {/* Payment history */}
+        <Card className="space-y-4">
+          <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Payment history</p>
           <table className="w-full text-sm">
-            <thead className="bg-surface-tint text-xs text-ink-muted border-b border-surface-border">
-              <tr>
-                <th className="p-3 text-left">Affiliate</th>
-                <th className="p-3 text-right">Fraud Score</th>
-                <th className="p-3 text-left">Flags</th>
-                <th className="p-3 text-left">Actions</th>
+            <thead>
+              <tr className="border-b border-gray-200">
+                {["Date", "Affiliate", "Amount", "Method", "Status", ""].map(h => (
+                  <th key={h} className="text-left text-xs font-semibold text-gray-500 pb-2 pr-2">{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody>
-              {flagged.map(a => (
-                <tr key={a.id} className="table-row-hover">
-                  <td className="p-3">
-                    <div className="font-medium text-ink">{a.name}</div>
-                    <div className="text-[11px] text-ink-muted">{a.email}</div>
-                  </td>
-                  <td className="p-3 text-right">
-                    <span className={`font-bold text-sm ${a.fraud_score > 70 ? "text-red-600" : "text-amber-600"}`}>{a.fraud_score}</span>
-                    <span className="text-xs text-ink-muted">/100</span>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex flex-wrap gap-1">
-                      {(a.flags as string[]).map((flag: string) => (
-                        <span key={flag} className="badge-crit text-[10px]">{flag}</span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => blockAffiliate(a.id)} className="btn-danger text-xs py-1 px-2 gap-1">
-                        <Ban className="w-3 h-3" /> Block
-                      </button>
-                      <button className="btn-outline text-xs py-1 px-2 gap-1">
-                        <Eye className="w-3 h-3" /> Review
-                      </button>
-                    </div>
-                  </td>
+            <tbody className="divide-y divide-gray-100">
+              {mockPayouts.map(p => (
+                <tr key={p.id}>
+                  <td className="py-2 pr-2 text-xs text-gray-500">{p.date}</td>
+                  <td className="py-2 pr-2 text-gray-700 text-xs">{p.affiliate}</td>
+                  <td className="py-2 pr-2 font-medium">${p.amount}</td>
+                  <td className="py-2 pr-2"><span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">{p.method}</span></td>
+                  <td className="py-2 pr-2"><StatusBadge status={p.status} /></td>
+                  <td className="py-2"><button className="text-gray-400 hover:text-gray-600"><Download size={13} /></button></td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </Card>
+      </div>
+
+      {/* Auto-payout settings */}
+      <Card className="space-y-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-semibold text-gray-900">Auto-payout settings</p>
+            <p className="text-sm text-gray-500">Automatically pay affiliates based on a schedule.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Toggle on={autoPayoutEnabled} onChange={setAutoPayoutEnabled} />
+            {!autoPayoutEnabled && <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Connect PayPal to enable</span>}
+          </div>
+        </div>
+        <div>
+          <Label>Payment schedule</Label>
+          <div className="space-y-2 mt-2">
+            {[["approval", "Immediately on approval"], ["specific", "Specific date"], ["cycle", "Payment cycle (1st, 15th)"]].map(([val, label]) => (
+              <label key={val} className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" value={val} checked={schedule === val} onChange={() => setSchedule(val)} className="text-indigo-600" />
+                <span className="text-sm text-gray-700">{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="max-w-xs"><Label>Minimum threshold ($)</Label><Input type="number" value={threshold} onChange={setThreshold} /></div>
+      </Card>
+
+      {showPay && (
+        <Modal title={`Pay ${showPay.affiliate}`} onClose={() => setShowPay(null)}>
+          <div><Label>Payment method</Label>
+            <Select value={payMethod} onChange={setPayMethod} options={[{ value: "paypal", label: "PayPal" }, { value: "bank", label: "Bank Transfer" }, { value: "credit", label: "Store Credit" }, { value: "manual", label: "Manual" }]} />
+          </div>
+          <div><Label>Amount</Label>
+            <div className="relative"><span className="absolute left-3 top-2.5 text-gray-400 text-sm">$</span><Input type="number" value={showPay.amount} className="pl-7" /></div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <OutlineBtn onClick={() => setShowPay(null)}>Cancel</OutlineBtn>
+            <PrimaryBtn onClick={() => setShowPay(null)}>Confirm Payment</PrimaryBtn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── TAB 5: Display ───────────────────────────────────────────────────────────
+
+function DisplayTab() {
+  const [subTab, setSubTab] = useState("Registration Page");
+  const [template, setTemplate] = useState("Fashion");
+  const [primaryColor, setPrimaryColor] = useState("#6366f1");
+  const [fields, setFields] = useState([
+    { name: "First name", show: true, required: true },
+    { name: "Last name", show: true, required: false },
+    { name: "Email", show: true, required: true },
+    { name: "Password", show: true, required: true },
+    { name: "Phone", show: false, required: false },
+    { name: "Website", show: false, required: false },
+    { name: "Social handle", show: false, required: false },
+    { name: "Promotion method", show: false, required: false },
+  ]);
+  const [headline, setHeadline] = useState("Become an Affiliate");
+  const [subheadline, setSubheadline] = useState("Join our affiliate program and start earning today.");
+  const [thankYouStyle, setThankYouStyle] = useState("Style");
+  const [thankYouSection, setThankYouSection] = useState<string | null>(null);
+  const [socialEnabled, setSocialEnabled] = useState(true);
+  const [platforms, setPlatforms] = useState({ facebook: true, twitter: true, instagram: false, pinterest: false, whatsapp: true });
+  const [shareMessage, setShareMessage] = useState("Check out this amazing store! {{affiliate_link}}");
+  const [showForgotPw, setShowForgotPw] = useState(true);
+  const [showPw, setShowPw] = useState(false);
+  const [loginHeadline, setLoginHeadline] = useState("AFFILIATE LOGIN");
+  const [selectedProgram, setSelectedProgram] = useState("Default Program");
+
+  const templates = ["Fashion", "Minimal", "Bold", "Classic"];
+
+  return (
+    <div>
+      <div className="flex gap-1 mb-6 border-b border-gray-200">
+        {["Registration Page", "Thank You Page", "Social Sharing", "Login Page"].map(t => (
+          <button key={t} onClick={() => setSubTab(t)} className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${subTab === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>{t}</button>
+        ))}
+      </div>
+
+      {subTab === "Registration Page" && (
+        <div className="flex gap-6">
+          {/* Editor */}
+          <div className="w-[340px] flex-shrink-0 space-y-5">
+            <Card className="space-y-3">
+              <p className="text-sm font-semibold text-gray-800">Template</p>
+              <div className="grid grid-cols-2 gap-2">
+                {templates.map(t => (
+                  <button key={t} onClick={() => setTemplate(t)} className={`py-3 rounded-lg border-2 text-sm font-medium transition-colors ${template === t ? "border-indigo-600 bg-indigo-50 text-indigo-700" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}>{t}</button>
+                ))}
+              </div>
+            </Card>
+
+            <Card className="space-y-2">
+              <p className="text-sm font-semibold text-gray-800 mb-2">Form fields</p>
+              {fields.map((f, i) => (
+                <div key={f.name} className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
+                  <span className="text-sm text-gray-700">{f.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${f.required ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-500"}`}>{f.required ? "Required" : "Optional"}</span>
+                    <button onClick={() => setFields(prev => prev.map((x, j) => j === i ? { ...x, show: !x.show } : x))}>
+                      {f.show ? <Eye size={14} className="text-gray-500" /> : <EyeOff size={14} className="text-gray-400" />}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </Card>
+
+            <Card className="space-y-3">
+              <div><Label>Headline</Label><Input value={headline} onChange={setHeadline} /></div>
+              <div><Label>Subheadline</Label><Input value={subheadline} onChange={setSubheadline} /></div>
+              <div>
+                <Label>Primary color</Label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="h-9 w-14 rounded border border-gray-300 cursor-pointer" />
+                  <span className="text-sm text-gray-600">{primaryColor}</span>
+                </div>
+              </div>
+            </Card>
+
+            <div className="flex gap-3">
+              <OutlineBtn className="flex-1">Add to Shopify store</OutlineBtn>
+              <PrimaryBtn className="flex-1">Save</PrimaryBtn>
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="flex-1 bg-gray-50 rounded-xl flex items-center justify-center p-8">
+            <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
+              <div className="w-12 h-12 rounded-xl mb-4" style={{ backgroundColor: primaryColor }} />
+              <h2 className="text-xl font-bold text-gray-900 mb-1">{headline}</h2>
+              <p className="text-sm text-gray-500 mb-6">{subheadline}</p>
+              <div className="space-y-3">
+                {fields.filter(f => f.show).map(f => (
+                  <div key={f.name}>
+                    <div className="block text-xs font-medium text-gray-600 mb-1">{f.name}{f.required && <span className="text-red-500 ml-0.5">*</span>}</div>
+                    <div className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-400 bg-gray-50">{f.name}...</div>
+                  </div>
+                ))}
+              </div>
+              <button className="mt-5 w-full py-2.5 rounded-lg text-white text-sm font-medium" style={{ backgroundColor: primaryColor }}>Register</button>
+              <p className="text-center text-xs text-gray-500 mt-3">Already have an account? <span className="text-indigo-600 cursor-pointer">Log in</span></p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {subTab === "Thank You Page" && (
+        <div className="flex gap-0">
+          {/* Editor */}
+          <div className="w-[320px] flex-shrink-0 border-r border-gray-200 pr-5 space-y-4">
+            <p className="font-semibold text-gray-900">Edit thank you page</p>
+            <div>
+              <Label>Ring to program:</Label>
+              <div className="flex items-center gap-2">
+                <Select value={selectedProgram} onChange={setSelectedProgram} options={mockPrograms.map(p => ({ value: p.name, label: p.name }))} className="flex-1" />
+                <button className="p-2 text-gray-400 hover:text-gray-600"><X size={14} /></button>
+              </div>
+            </div>
+            <div className="flex gap-1 border-b border-gray-200">
+              {["Style", "Content"].map(t => (
+                <button key={t} onClick={() => setThankYouStyle(t)} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${thankYouStyle === t ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>{t}</button>
+              ))}
+            </div>
+            <div className="space-y-2">
+              {[["General", "Basic page settings"], ["Content", "Page text and elements"], ["Custom CSS", "Advanced styling"]].map(([section, desc]) => (
+                <div key={section} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <button onClick={() => setThankYouSection(thankYouSection === section ? null : section as string)} className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50">
+                    {section}
+                    {thankYouSection === section ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  </button>
+                  {thankYouSection === section && (
+                    <div className="px-3 pb-3 border-t border-gray-100">
+                      <p className="text-xs text-gray-500 mt-2 mb-2">{desc}</p>
+                      {section === "Custom CSS" ? (
+                        <textarea placeholder="Enter CSS code" className="w-full h-[120px] border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
+                      ) : (
+                        <Input placeholder={`Edit ${section?.toLowerCase()} settings...`} />
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="flex-1 bg-gray-50 flex items-center justify-center p-8">
+            <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm text-center">
+              <div className="bg-red-500 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <ArrowUpRight size={28} className="text-white" />
+              </div>
+              <h2 className="font-semibold text-gray-900 text-lg mb-3">Verify your email address</h2>
+              <p className="text-sm text-gray-500 mb-5 leading-relaxed">
+                {"We've sent a verification link to your email. Just click on the link in that email to complete your signup. If you don't see it, you may need to check your Spam, Updates or Promotion folder. Still can't find the email?"}
+              </p>
+              <button className="w-full py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium">Resend email</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {subTab === "Social Sharing" && (
+        <div className="grid lg:grid-cols-2 gap-6">
+          <div className="space-y-5">
+            <Card className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-gray-900">Enable social sharing</p>
+                <Toggle on={socialEnabled} onChange={setSocialEnabled} />
+              </div>
+              <div className="space-y-3">
+                {Object.entries(platforms).map(([platform, enabled]) => (
+                  <div key={platform} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700 capitalize">{platform === "twitter" ? "Twitter/X" : platform}</span>
+                    <Toggle on={enabled} onChange={v => setPlatforms(p => ({ ...p, [platform]: v }))} />
+                  </div>
+                ))}
+              </div>
+              <div>
+                <Label>Share message</Label>
+                <Textarea value={shareMessage} onChange={setShareMessage} rows={3} />
+                <p className="text-xs text-gray-400 mt-1">Use {"{{affiliate_link}}"} as placeholder</p>
+              </div>
+              <div>
+                <Label>Share image</Label>
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center">
+                  <Image size={24} className="mx-auto text-gray-400 mb-2" />
+                  <p className="text-xs text-gray-500">Drag & drop or click to upload</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-6">
+            <p className="text-sm font-semibold text-gray-700 mb-4">Preview</p>
+            <div className="bg-white rounded-xl shadow border border-gray-200 p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 text-sm font-bold">JS</div>
+                <div><p className="text-sm font-medium text-gray-900">Jennifer Sheldon</p><p className="text-xs text-gray-500">About 2 hours ago</p></div>
+              </div>
+              <div className="bg-gray-100 rounded-lg p-3 mb-3">
+                <div className="w-8 h-8 bg-red-500 rounded mb-2 flex items-center justify-center"><ArrowUpRight size={14} className="text-white" /></div>
+                <p className="text-xs text-gray-600">{shareMessage}</p>
+              </div>
+              <div className="flex gap-2">
+                {Object.entries(platforms).filter(([, v]) => v).map(([p]) => (
+                  <span key={p} className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full capitalize">{p}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {subTab === "Login Page" && (
+        <div className="flex gap-6">
+          {/* Editor */}
+          <div className="w-[300px] flex-shrink-0 space-y-4">
+            <Card className="space-y-3">
+              <div><Label>Page headline</Label><Input value={loginHeadline} onChange={setLoginHeadline} /></div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-700">Show "Forgot password?"</span>
+                <Toggle on={showForgotPw} onChange={setShowForgotPw} />
+              </div>
+              <div>
+                <Label>Logo</Label>
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center">
+                  <Upload size={18} className="mx-auto text-gray-400 mb-1" />
+                  <p className="text-xs text-gray-500">Upload logo</p>
+                </div>
+              </div>
+              <div>
+                <Label>Background color</Label>
+                <div className="flex items-center gap-2">
+                  <input type="color" defaultValue="#f9fafb" className="h-9 w-14 rounded border border-gray-300 cursor-pointer" />
+                </div>
+              </div>
+            </Card>
+            <PrimaryBtn className="w-full">Save</PrimaryBtn>
+          </div>
+
+          {/* Preview */}
+          <div className="flex-1 bg-gray-50 rounded-xl flex items-center justify-center p-8">
+            <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm">
+              <p className="text-center font-bold text-gray-900 text-lg uppercase tracking-wide mb-6">{loginHeadline}</p>
+              <div className="space-y-3 mb-4">
+                <div><div className="text-xs font-medium text-gray-600 mb-1">Email</div><div className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-400 bg-gray-50">email@example.com</div></div>
+                <div>
+                  <div className="text-xs font-medium text-gray-600 mb-1">Password</div>
+                  <div className="relative">
+                    <div className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-400 bg-gray-50">••••••••</div>
+                    <button className="absolute right-3 top-2 text-gray-400" onClick={() => setShowPw(!showPw)}>{showPw ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                  </div>
+                </div>
+              </div>
+              <div className="border border-gray-300 rounded-lg p-3 flex items-center gap-3 mb-4 bg-gray-50">
+                <div className="w-4 h-4 border border-gray-400 rounded" />
+                <span className="text-xs text-gray-600">I&apos;m not a robot</span>
+                <div className="ml-auto"><div className="w-8 h-8 bg-gray-300 rounded" /></div>
+              </div>
+              <button className="w-full py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium mb-3">Login</button>
+              {showForgotPw && <p className="text-center text-xs text-indigo-600 cursor-pointer mb-3">Forgot password?</p>}
+              <div className="text-center">
+                <p className="text-xs text-gray-500 mb-2">Do you have an account?</p>
+                <button className="w-full py-2 rounded-lg border border-indigo-600 text-indigo-600 text-sm font-medium hover:bg-indigo-50">Create an account</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-// ─── Settings Tab ─────────────────────────────────────────────────────────────
+// ─── Motivation Card ──────────────────────────────────────────────────────────
 
-function SettingsTab({ brandId }: { brandId: string }) {
-  const [settings, setSettings] = useState({
-    cookie_days: "30",
-    auto_approve: false,
-    min_payout: "50",
-    marketplace: false,
-    fraud_threshold: "30",
-  });
-  const [saved, setSaved] = useState(false);
-  const [widgetCopied, setWidgetCopied] = useState(false);
-  const [payoutSchedule, setPayoutSchedule] = useState("1st");
-  const embedCode = `<iframe src="https://YOUR_APP_URL/affiliate-portal?brand=BRAND_ID" width="100%" height="600px" frameborder="0"></iframe>`;
-
-  async function save() {
-    await fetch(`/api/affiliates/${brandId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "settings", ...settings }),
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
-
-  function copyEmbed() {
-    navigator.clipboard.writeText(embedCode);
-    setWidgetCopied(true);
-    setTimeout(() => setWidgetCopied(false), 2000);
-  }
-
+function MotivationCard({ icon, title, desc, btnText, onClick }: { icon: React.ReactNode; title: string; desc: string; btnText: string; onClick: () => void }) {
   return (
-    <div className="max-w-xl space-y-6">
-      <div className="card space-y-4">
-        <h3 className="font-semibold text-ink">Program Defaults</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="label">Default Cookie Days</label>
-            <input className="input" type="number" value={settings.cookie_days} onChange={e => setSettings(s => ({ ...s, cookie_days: e.target.value }))} />
-          </div>
-          <div>
-            <label className="label">Minimum Payout</label>
-            <input className="input" type="number" value={settings.min_payout} onChange={e => setSettings(s => ({ ...s, min_payout: e.target.value }))} />
-          </div>
-        </div>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" checked={settings.auto_approve} onChange={e => setSettings(s => ({ ...s, auto_approve: e.target.checked }))} className="rounded" />
-          <div>
-            <div className="text-sm font-medium text-ink">Auto-approve new affiliates</div>
-            <div className="text-xs text-ink-muted">Affiliates are approved instantly without manual review</div>
-          </div>
-        </label>
+    <div className="bg-white border border-gray-200 rounded-xl p-5 flex items-start gap-4">
+      <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">{icon}</div>
+      <div className="flex-1">
+        <div className="font-semibold text-gray-900 mb-1">{title}</div>
+        <div className="text-sm text-gray-500 mb-3">{desc}</div>
+        <button onClick={onClick} className="text-sm border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-50 transition-colors">{btnText}</button>
       </div>
-
-      <div className="card space-y-4">
-        <h3 className="font-semibold text-ink">Marketplace</h3>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" checked={settings.marketplace} onChange={e => setSettings(s => ({ ...s, marketplace: e.target.checked }))} className="rounded" />
-          <div>
-            <div className="text-sm font-medium text-ink">List on affiliate marketplace</div>
-            <div className="text-xs text-ink-muted">Allow affiliates to discover and join your program</div>
-          </div>
-        </label>
-      </div>
-
-      <div className="card space-y-4">
-        <h3 className="font-semibold text-ink">Fraud Detection</h3>
-        <div>
-          <label className="label">Fraud Score Threshold (0–100)</label>
-          <input className="input" type="number" min="0" max="100" value={settings.fraud_threshold} onChange={e => setSettings(s => ({ ...s, fraud_threshold: e.target.value }))} />
-          <p className="text-xs text-ink-muted mt-1">Affiliates above this score are flagged in the Fraud tab.</p>
-        </div>
-      </div>
-
-      {/* Affiliate Portal Widget */}
-      <div className="card space-y-4">
-        <div>
-          <h3 className="font-semibold text-ink">Affiliate Portal Widget</h3>
-          <p className="text-xs text-ink-muted mt-1">Embed a self-service portal where affiliates can see their stats, referral links, and payouts</p>
-        </div>
-        <div>
-          <label className="label">Embed Code</label>
-          <div className="relative">
-            <textarea
-              readOnly
-              className="input resize-none font-mono text-[11px] pr-20"
-              rows={3}
-              value={embedCode}
-            />
-            <button
-              onClick={copyEmbed}
-              className="absolute top-2 right-2 btn-outline text-xs py-1 px-2 gap-1 flex items-center"
-            >
-              <Copy className="w-3 h-3" />
-              {widgetCopied ? "Copied!" : "Copy"}
-            </button>
-          </div>
-          <p className="text-xs text-ink-muted mt-1.5">Replace <code className="bg-surface-tint px-1 rounded">YOUR_APP_URL</code> with your app domain and <code className="bg-surface-tint px-1 rounded">BRAND_ID</code> with your brand ID</p>
-        </div>
-      </div>
-
-      {/* Payout Automation */}
-      <div className="card space-y-4">
-        <div>
-          <h3 className="font-semibold text-ink">Automatic Payouts</h3>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="badge-neutral text-xs px-2 py-0.5">Manual</span>
-          <p className="text-xs text-ink-muted">Payouts are currently manual. Click "Mark as Paid" in the Payouts tab after sending money via PayPal or bank transfer.</p>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-medium text-ink">Enable PayPal Auto-payout</div>
-            <div className="text-xs text-ink-muted">Connect PayPal API credentials in Settings → Integrations to enable automatic monthly payouts</div>
-          </div>
-          <button disabled title="Connect PayPal API credentials in Settings → Integrations to enable automatic monthly payouts" className="opacity-40 cursor-not-allowed">
-            <ToggleLeft className="w-8 h-8 text-ink-muted" />
-          </button>
-        </div>
-
-        <div>
-          <label className="label">Monthly Payout Schedule</label>
-          <select
-            className="input"
-            value={payoutSchedule}
-            onChange={e => setPayoutSchedule(e.target.value)}
-            disabled
-          >
-            <option value="1st">1st of month</option>
-            <option value="15th">15th of month</option>
-            <option value="request">On request</option>
-          </select>
-          <p className="text-xs text-ink-muted mt-1">Schedule applies once PayPal auto-payout is enabled.</p>
-        </div>
-      </div>
-
-      <button onClick={save} className="btn-primary gap-1.5">
-        {saved ? <><CheckCircle2 className="w-4 h-4" /> Saved!</> : "Save Settings"}
-      </button>
     </div>
   );
 }
 
-// ─── Root Component ───────────────────────────────────────────────────────────
+// ─── TAB 6: Motivation ────────────────────────────────────────────────────────
 
-export default function AffiliatesClient({ brandId, affiliates, clicks, conversions, programs, payouts }: Props) {
-  const [tab, setTab] = useState<Tab>("Overview");
+function MotivationTab() {
+  const [showCoupon, setShowCoupon] = useState(false);
+  const [showMedia, setShowMedia] = useState(false);
+  const [showGift, setShowGift] = useState(false);
+  const [showBonus, setShowBonus] = useState(false);
+  const [welcomeGift, setWelcomeGift] = useState(false);
+  const [milestoneGift, setMilestoneGift] = useState(false);
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <p className="font-bold text-gray-900 mb-4">Promotional resources</p>
+        <div className="grid grid-cols-2 gap-4">
+          <MotivationCard icon={<Tag size={22} className="text-blue-600" />} title="Coupons" desc="Let affiliates promote your brand by coupons" btnText="Manage coupons" onClick={() => setShowCoupon(true)} />
+          <MotivationCard icon={<Image size={22} className="text-blue-600" />} title="Media gallery" desc="Share marketing materials with affiliates" btnText="Add media" onClick={() => setShowMedia(true)} />
+        </div>
+      </div>
+
+      <div>
+        <p className="font-bold text-gray-900 mb-4">Incentives</p>
+        <div className="grid grid-cols-2 gap-4">
+          <MotivationCard icon={<Gift size={22} className="text-blue-600" />} title="Gifts" desc="Send sample products or gift packages to affiliates" btnText="Set up" onClick={() => setShowGift(true)} />
+          <MotivationCard icon={<Trophy size={22} className="text-blue-600" />} title="Bonuses" desc="Give affiliates bonuses for motivation" btnText="Set up" onClick={() => setShowBonus(true)} />
+        </div>
+      </div>
+
+      {showCoupon && (
+        <Modal title="Manage Coupons" onClose={() => setShowCoupon(false)}>
+          <div><Label>Coupon code</Label><Input placeholder="e.g. SUMMER20" /></div>
+          <div><Label>Discount %</Label><Input type="number" placeholder="20" /></div>
+          <div><Label>Expires</Label><Input type="date" /></div>
+          <div className="flex justify-end gap-3"><OutlineBtn onClick={() => setShowCoupon(false)}>Cancel</OutlineBtn><PrimaryBtn onClick={() => setShowCoupon(false)}>Create coupon</PrimaryBtn></div>
+        </Modal>
+      )}
+
+      {showMedia && (
+        <Modal title="Media Gallery" onClose={() => setShowMedia(false)}>
+          <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center"><Upload size={28} className="mx-auto text-gray-400 mb-2" /><p className="text-sm text-gray-600">Drop files here or click to upload</p></div>
+          <div className="space-y-2">
+            {["banner-summer.jpg", "logo-dark.png", "promo-video.mp4"].map(f => (
+              <div key={f} className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-700">{f}</span>
+                <button className="text-xs text-indigo-600 hover:underline flex items-center gap-1"><Copy size={11} />Copy link</button>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end"><OutlineBtn onClick={() => setShowMedia(false)}>Close</OutlineBtn></div>
+        </Modal>
+      )}
+
+      {showGift && (
+        <Modal title="Gift Setup" onClose={() => setShowGift(false)}>
+          <div className="flex items-center justify-between"><span className="text-sm font-medium text-gray-800">Welcome gift</span><Toggle on={welcomeGift} onChange={setWelcomeGift} /></div>
+          {welcomeGift && <div><Label>Product</Label><Input placeholder="Search products..." /></div>}
+          <div className="flex items-center justify-between"><span className="text-sm font-medium text-gray-800">Milestone gift</span><Toggle on={milestoneGift} onChange={setMilestoneGift} /></div>
+          {milestoneGift && <>
+            <div><Label>Milestone amount ($)</Label><Input type="number" placeholder="500" /></div>
+            <div><Label>Gift product</Label><Input placeholder="Search products..." /></div>
+          </>}
+          <div className="flex justify-end gap-3"><OutlineBtn onClick={() => setShowGift(false)}>Cancel</OutlineBtn><PrimaryBtn onClick={() => setShowGift(false)}>Save</PrimaryBtn></div>
+        </Modal>
+      )}
+
+      {showBonus && (
+        <Modal title="Bonus Setup" onClose={() => setShowBonus(false)}>
+          <div><Label>Bonus name</Label><Input placeholder="e.g. Summer bonus" /></div>
+          <div><Label>Trigger type</Label>
+            <Select value="sales" onChange={() => {}} options={[{ value: "sales", label: "Reach $X in sales" }, { value: "referrals", label: "Reach N referrals" }]} />
+          </div>
+          <div><Label>Threshold</Label><Input type="number" placeholder="1000" /></div>
+          <div><Label>Bonus amount ($)</Label><Input type="number" placeholder="50" /></div>
+          <div><Label>Frequency</Label>
+            <Select value="one-time" onChange={() => {}} options={[{ value: "one-time", label: "One-time" }, { value: "recurring", label: "Recurring" }]} />
+          </div>
+          <div className="flex justify-end gap-3"><OutlineBtn onClick={() => setShowBonus(false)}>Cancel</OutlineBtn><PrimaryBtn onClick={() => setShowBonus(false)}>Save bonus</PrimaryBtn></div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── TAB 7: Reach Out ─────────────────────────────────────────────────────────
+
+function ReachOutTab() {
+  const [showReferral, setShowReferral] = useState(false);
+  const [showMLM, setShowMLM] = useState(false);
+  const [showMarketplace, setShowMarketplace] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [mlmEnabled, setMlmEnabled] = useState(false);
+  const [showPostPurchase, setShowPostPurchase] = useState(true);
+  const [showCommission, setShowCommission] = useState(true);
+
+  return (
+    <div className="space-y-8">
+      <h2 className="text-xl font-bold text-gray-900">Outreach</h2>
+
+      <div>
+        <p className="font-bold text-gray-900 mb-4">Affiliate recruitment</p>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <MotivationCard icon={<FileText size={22} className="text-blue-600" />} title="Customer referral" desc="Rewards customers for referring their friends" btnText="Set up" onClick={() => setShowReferral(true)} />
+          <MotivationCard icon={<Users size={22} className="text-blue-600" />} title="Multi-level marketing" desc="Grow your affiliate team with network marketing" btnText="Set up" onClick={() => setShowMLM(true)} />
+        </div>
+        <div className="max-w-sm">
+          <MotivationCard icon={<Store size={22} className="text-blue-600" />} title="Marketplace listing" desc="Post your offer on UpPromote marketplace" btnText="Edit offer" onClick={() => setShowMarketplace(true)} />
+        </div>
+      </div>
+
+      <div>
+        <p className="font-bold text-gray-900 mb-4">Affiliate communication</p>
+        <div className="grid grid-cols-2 gap-4">
+          <MotivationCard icon={<Mail size={22} className="text-blue-600" />} title="Emails" desc="Edit email templates and send bulk emails" btnText="Manage emails" onClick={() => setShowEmail(true)} />
+          <MotivationCard icon={<MessageSquare size={22} className="text-blue-600" />} title="Chat with affiliates" desc="Send direct messages to affiliates via app" btnText="Open chat" onClick={() => setShowChat(true)} />
+        </div>
+      </div>
+
+      {showReferral && (
+        <Modal title="Customer Referral Setup" onClose={() => setShowReferral(false)}>
+          <div className="flex items-center justify-between"><span className="text-sm font-medium text-gray-800">Show post-purchase popup</span><Toggle on={showPostPurchase} onChange={setShowPostPurchase} /></div>
+          <div><Label>Popup position</Label><Select value="bottom-right" onChange={() => {}} options={[{ value: "bottom-right", label: "Bottom right" }, { value: "bottom-left", label: "Bottom left" }, { value: "center", label: "Center" }]} /></div>
+          <div><Label>Button text</Label><Input placeholder="Share & earn" /></div>
+          <div className="flex justify-end gap-3"><OutlineBtn onClick={() => setShowReferral(false)}>Cancel</OutlineBtn><PrimaryBtn onClick={() => setShowReferral(false)}>Save</PrimaryBtn></div>
+        </Modal>
+      )}
+
+      {showMLM && (
+        <Modal title="Multi-Level Marketing" onClose={() => setShowMLM(false)}>
+          <div className="flex items-center justify-between"><span className="text-sm font-medium text-gray-800">Enable MLM</span><Toggle on={mlmEnabled} onChange={setMlmEnabled} /></div>
+          <div><Label>Max levels (1–5)</Label><Select value="2" onChange={() => {}} options={[1, 2, 3, 4, 5].map(n => ({ value: String(n), label: `${n} level${n > 1 ? "s" : ""}` }))} /></div>
+          <div><Label>Level 2 commission %</Label><Input type="number" placeholder="5" /></div>
+          <div><Label>Level 3 commission %</Label><Input type="number" placeholder="2" /></div>
+          <div className="flex justify-end gap-3"><OutlineBtn onClick={() => setShowMLM(false)}>Cancel</OutlineBtn><PrimaryBtn onClick={() => setShowMLM(false)}>Save</PrimaryBtn></div>
+        </Modal>
+      )}
+
+      {showMarketplace && (
+        <Modal title="Marketplace Listing" onClose={() => setShowMarketplace(false)}>
+          <div><Label>Description</Label><Textarea placeholder="Describe your affiliate program offer..." rows={4} /></div>
+          <div className="flex items-center justify-between"><span className="text-sm font-medium text-gray-800">Show commission rate</span><Toggle on={showCommission} onChange={setShowCommission} /></div>
+          <div className="flex justify-end gap-3"><OutlineBtn onClick={() => setShowMarketplace(false)}>Cancel</OutlineBtn><PrimaryBtn onClick={() => setShowMarketplace(false)}>Save</PrimaryBtn></div>
+        </Modal>
+      )}
+
+      {showEmail && (
+        <Modal title="Email Templates" onClose={() => setShowEmail(false)} wide>
+          <div className="space-y-2">
+            {["Approval", "Welcome", "New coupon", "Referral confirmed", "Monthly report"].map(t => (
+              <div key={t} className="flex items-center justify-between py-3 border-b border-gray-100">
+                <span className="text-sm font-medium text-gray-800">{t}</span>
+                <div className="flex gap-2">
+                  <OutlineBtn className="text-xs px-3 py-1.5">Edit</OutlineBtn>
+                  <OutlineBtn className="text-xs px-3 py-1.5">Send</OutlineBtn>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end"><OutlineBtn onClick={() => setShowEmail(false)}>Close</OutlineBtn></div>
+        </Modal>
+      )}
+
+      {showChat && (
+        <Modal title="Chat with Affiliates" onClose={() => setShowChat(false)} wide>
+          <div className="flex gap-4 h-64">
+            <div className="w-40 border-r border-gray-200 overflow-y-auto">
+              {mockAffiliates.map(a => (
+                <div key={a.id} className="px-2 py-2 hover:bg-gray-50 cursor-pointer rounded text-sm text-gray-700 truncate">{a.name}</div>
+              ))}
+            </div>
+            <div className="flex-1 flex flex-col">
+              <div className="flex-1 bg-gray-50 rounded-lg p-3 text-sm text-gray-400 italic">Select an affiliate to start chatting...</div>
+              <div className="flex gap-2 mt-2">
+                <input placeholder="Type a message..." className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <PrimaryBtn><Send size={14} /></PrimaryBtn>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end"><OutlineBtn onClick={() => setShowChat(false)}>Close</OutlineBtn></div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── TAB 8: Analytics ─────────────────────────────────────────────────────────
+
+function AnalyticsTab({ clicks, conversions }: { clicks: any[]; conversions: any[] }) {
+  const [period, setPeriod] = useState("30d");
+
+  const kpis = [
+    { label: "Total Revenue", value: "$14,820", formula: "Sum of all referred orders" },
+    { label: "CR (Conversion Rate)", value: "8.4%", formula: "Conversions / Clicks × 100" },
+    { label: "AOV", value: "$212", formula: "Total Revenue / Orders" },
+    { label: "CPC", value: "$0.43", formula: "Commission / Clicks" },
+    { label: "ROI", value: "340%", formula: "(Revenue - Cost) / Cost × 100" },
+    { label: "CAC", value: "$18.2", formula: "Total Commission / New Customers" },
+  ];
+
+  const topAffiliates = [
+    { rank: 1, name: "David Torres", revenue: 4200, referrals: 28, cr: "12.4%", commission: 840 },
+    { rank: 2, name: "Jennifer Sheldon", revenue: 2840, referrals: 18, cr: "9.1%", commission: 284 },
+    { rank: 3, name: "Marcus Reid", revenue: 1720, referrals: 11, cr: "8.7%", commission: 258 },
+    { rank: 4, name: "Sarah Kim", revenue: 420, referrals: 3, cr: "5.2%", commission: 42 },
+    { rank: 5, name: "Emma Wilson", revenue: 0, referrals: 0, cr: "0%", commission: 0 },
+  ];
+
+  const topProducts = [
+    { product: "Classic Hoodie", revenue: 3200, referrals: 14, topAffiliate: "David Torres" },
+    { product: "Summer Collection T-Shirt", revenue: 2100, referrals: 21, topAffiliate: "Jennifer Sheldon" },
+    { product: "Slim Fit Jeans", revenue: 1850, referrals: 9, topAffiliate: "Marcus Reid" },
+    { product: "Sneakers Pro", revenue: 1200, referrals: 6, topAffiliate: "David Torres" },
+    { product: "Canvas Bag", revenue: 890, referrals: 12, topAffiliate: "Jennifer Sheldon" },
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 border-b border-surface-border overflow-x-auto">
-        {TABS.map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px ${
-              tab === t
-                ? "border-primary text-primary"
-                : "border-transparent text-ink-muted hover:text-ink"
-            }`}
-          >
-            {t}
-          </button>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-900">Analytics</h2>
+        <div className="flex gap-1">
+          {["7d", "30d", "90d"].map(p => (
+            <button key={p} onClick={() => setPeriod(p)} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${period === p ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>{p}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-3 gap-4">
+        {kpis.map(k => (
+          <Card key={k.label} className="space-y-1">
+            <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">{k.label}</p>
+            <p className="text-2xl font-bold text-gray-900">{k.value}</p>
+            <p className="text-xs text-gray-400">{k.formula}</p>
+          </Card>
         ))}
       </div>
 
-      {/* Tab content */}
-      {tab === "Overview" && <OverviewTab affiliates={affiliates} clicks={clicks} conversions={conversions} payouts={payouts} />}
-      {tab === "Affiliates" && <AffiliatesTab affiliates={affiliates} conversions={conversions} programs={programs} brandId={brandId} />}
-      {tab === "Programs" && <ProgramsTab programs={programs} affiliates={affiliates} brandId={brandId} />}
-      {tab === "Payouts" && <PayoutsTab payouts={payouts} affiliates={affiliates} brandId={brandId} />}
-      {tab === "Fraud" && <FraudTab affiliates={affiliates} clicks={clicks} conversions={conversions} />}
-      {tab === "Settings" && <SettingsTab brandId={brandId} />}
+      {/* Charts */}
+      <div className="grid grid-cols-2 gap-6">
+        <Card>
+          <p className="text-sm font-semibold text-gray-800 mb-4">Revenue over time</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="day" tick={{ fontSize: 10 }} interval={6} />
+              <YAxis tick={{ fontSize: 10 }} />
+              <Tooltip />
+              <Area type="monotone" dataKey="revenue" stroke="#6366f1" fill="url(#colorRevenue)" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Card>
+
+        <Card>
+          <p className="text-sm font-semibold text-gray-800 mb-4">Clicks over time</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="day" tick={{ fontSize: 10 }} interval={6} />
+              <YAxis tick={{ fontSize: 10 }} />
+              <Tooltip />
+              <Line type="monotone" dataKey="clicks" stroke="#10b981" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+      </div>
+
+      {/* Tables */}
+      <div className="grid grid-cols-2 gap-6">
+        <Card>
+          <p className="text-sm font-semibold text-gray-800 mb-4">Top 5 Affiliates</p>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                {["Rank", "Name", "Revenue", "Refs", "CR%", "Commission"].map(h => (
+                  <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide pb-2 pr-2">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {topAffiliates.map(a => (
+                <tr key={a.rank}>
+                  <td className="py-2 pr-2 text-gray-500">#{a.rank}</td>
+                  <td className="py-2 pr-2 font-medium text-gray-900 text-xs">{a.name}</td>
+                  <td className="py-2 pr-2 text-gray-700">${a.revenue.toLocaleString()}</td>
+                  <td className="py-2 pr-2 text-gray-700">{a.referrals}</td>
+                  <td className="py-2 pr-2 text-gray-700">{a.cr}</td>
+                  <td className="py-2 text-gray-700">${a.commission}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+
+        <Card>
+          <p className="text-sm font-semibold text-gray-800 mb-4">Top 5 Products</p>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                {["Product", "Revenue", "Refs", "Top affiliate"].map(h => (
+                  <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide pb-2 pr-2">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {topProducts.map(p => (
+                <tr key={p.product}>
+                  <td className="py-2 pr-2 font-medium text-gray-900 text-xs">{p.product}</td>
+                  <td className="py-2 pr-2 text-gray-700">${p.revenue.toLocaleString()}</td>
+                  <td className="py-2 pr-2 text-gray-700">{p.referrals}</td>
+                  <td className="py-2 text-gray-500 text-xs">{p.topAffiliate}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+const TABS = ["Programs", "Affiliates", "Referrals", "Payments", "Display", "Motivation", "Reach Out", "Analytics"] as const;
+type Tab = typeof TABS[number];
+
+export default function AffiliatesClient({
+  brandId,
+  affiliates = [],
+  clicks = [],
+  conversions = [],
+  programs = [],
+  payouts = [],
+}: Props) {
+  const [activeTab, setActiveTab] = useState<Tab>("Programs");
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Top nav */}
+      <div className="bg-white border-b border-gray-200 px-6">
+        <div className="max-w-screen-xl mx-auto">
+          <div className="flex items-center gap-1">
+            {TABS.map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-4 text-sm whitespace-nowrap transition-colors border-b-2 -mb-px ${
+                  activeTab === tab
+                    ? "border-indigo-600 text-indigo-600 font-medium"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-screen-xl mx-auto px-6 py-6">
+        {activeTab === "Programs" && <ProgramsTab />}
+        {activeTab === "Affiliates" && <AffiliatesTab />}
+        {activeTab === "Referrals" && <ReferralsTab />}
+        {activeTab === "Payments" && <PaymentsTab />}
+        {activeTab === "Display" && <DisplayTab />}
+        {activeTab === "Motivation" && <MotivationTab />}
+        {activeTab === "Reach Out" && <ReachOutTab />}
+        {activeTab === "Analytics" && <AnalyticsTab clicks={clicks} conversions={conversions} />}
+      </div>
     </div>
   );
 }
