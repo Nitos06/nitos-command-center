@@ -1,0 +1,27 @@
+name = "NitaiEcomPro"
+client_id = "YOUR_SHOPIFY_CLIENT_ID"
+application_url = "https://nitaiecompro-nine.vercel.app"
+embedded = true
+
+[access_scopes]
+scopes = "read_orders,write_orders,read_products,write_checkouts,read_customers"
+
+[auth]
+redirect_urls = [
+  "https://nitaiecompro-nine.vercel.app/api/auth/shopify/callback"
+]
+
+[webhooks]
+api_version = "2025-01"
+
+  [[webhooks.subscriptions]]
+  topics = ["orders/paid"]
+  uri = "/api/webhooks/shopify/orders"
+
+[pos]
+embedded = false
+
+[[extensions]]
+type = "ui_extension"
+name = "post-purchase-upsell"
+handle = "post-purchase-upsell"

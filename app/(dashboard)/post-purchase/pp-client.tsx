@@ -17,7 +17,7 @@ interface Props {
   conversions: any[];
 }
 
-const TABS = ["Funnels", "Analytics", "Settings", "Landing Page"] as const;
+const TABS = ["Funnels", "Analytics", "Settings", "Landing Page", "Extension"] as const;
 type Tab = typeof TABS[number];
 
 type StepType = "upsell" | "downsell" | "cross-sell";
@@ -1044,6 +1044,141 @@ function PPLandingPageEditor({ brandId, funnels }: { brandId: string; funnels: a
   );
 }
 
+/* ─── Extension Tab ─────────────────────────────── */
+function ExtensionTab({ brandId }: { brandId: string }) {
+  const steps = [
+    {
+      num: "1",
+      title: "Register Shopify App",
+      desc: "Go to partners.shopify.com → Apps → Create app. Copy the Client ID into your shopify.app.toml.",
+      status: "pending",
+      link: "https://partners.shopify.com",
+      linkLabel: "Open Partners Dashboard →",
+    },
+    {
+      num: "2",
+      title: "Install Shopify CLI",
+      desc: 'Run: npm install -g @shopify/cli then shopify auth login in your terminal.',
+      status: "pending",
+      code: "npm install -g @shopify/cli && shopify auth login",
+    },
+    {
+      num: "3",
+      title: "Deploy Extension",
+      desc: "From your project root, run the deploy command. This registers the post-purchase extension with Shopify.",
+      status: "pending",
+      code: "shopify app deploy",
+    },
+    {
+      num: "4",
+      title: "Install on Your Store",
+      desc: "In Shopify Admin → Settings → Checkout → Post-purchase page, select \"NitaiEcomPro\" from the apps list.",
+      status: "pending",
+      link: "https://admin.shopify.com/store/YOUR_STORE/settings/checkout",
+      linkLabel: "Open Checkout Settings →",
+    },
+    {
+      num: "5",
+      title: "Create a Funnel",
+      desc: "Go to the Funnels tab, create an active funnel with at least one step (product + price). The extension will show it automatically.",
+      status: "pending",
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Header card */}
+      <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+            <Zap className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="font-bold text-lg">Post-Purchase Shopify Extension</h2>
+            <p className="text-indigo-200 text-sm">Native checkout upsell — managed from this dashboard</p>
+          </div>
+        </div>
+        <div className="bg-white/10 rounded-xl p-4 text-sm leading-relaxed">
+          <strong>How it works:</strong> After a customer completes checkout, Shopify shows your upsell offer natively (no redirect, no scripts). They can accept with one click — no re-entering payment info. Your funnels &amp; landing pages configured in this dashboard drive everything.
+        </div>
+      </div>
+
+      {/* Architecture diagram */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-5">
+        <h3 className="text-sm font-semibold text-gray-800 mb-4">Architecture</h3>
+        <div className="flex items-center gap-2 text-xs text-gray-600 overflow-x-auto pb-2">
+          {[
+            { icon: "🛒", label: "Customer buys" },
+            { icon: "→", label: "" },
+            { icon: "⚡", label: "Shopify triggers extension" },
+            { icon: "→", label: "" },
+            { icon: "🔗", label: "Extension calls /api/pp-funnels/offer" },
+            { icon: "→", label: "" },
+            { icon: "🎯", label: "Your funnel config returned" },
+            { icon: "→", label: "" },
+            { icon: "✅", label: "Native upsell shown" },
+          ].map((item, i) => (
+            item.label === ""
+              ? <span key={i} className="text-gray-300">→</span>
+              : <div key={i} className="flex items-center gap-1 bg-gray-50 rounded-lg px-2 py-1 shrink-0">
+                  <span>{item.icon}</span>
+                  <span>{item.label}</span>
+                </div>
+          ))}
+        </div>
+        <div className="mt-3 p-3 bg-indigo-50 rounded-xl text-xs text-indigo-700">
+          <strong>Zero extension code changes needed after setup.</strong> Edit your funnels in the Funnels tab — changes go live instantly in Shopify.
+        </div>
+      </div>
+
+      {/* Setup steps */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-5">
+        <h3 className="text-sm font-semibold text-gray-800 mb-4">One-Time Setup</h3>
+        <div className="space-y-3">
+          {steps.map((step) => (
+            <div key={step.num} className="flex gap-4 p-4 border border-gray-100 rounded-xl">
+              <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">{step.num}</div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm text-gray-800 mb-0.5">{step.title}</div>
+                <div className="text-xs text-gray-500 mb-2">{step.desc}</div>
+                {step.code && (
+                  <div className="bg-gray-900 text-green-400 font-mono text-xs px-3 py-2 rounded-lg">{step.code}</div>
+                )}
+                {step.link && (
+                  <a href={step.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500 hover:text-indigo-700">{step.linkLabel}</a>
+                )}
+              </div>
+              <div className="shrink-0">
+                <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Pending setup</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Live API endpoint */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-5">
+        <h3 className="text-sm font-semibold text-gray-800 mb-3">Live API Endpoints</h3>
+        <div className="space-y-2">
+          {[
+            { method: "POST", path: "/api/pp-funnels/offer", desc: "Extension calls this to get active offer for an order" },
+            { method: "POST", path: "/api/pp-funnels/accept", desc: "Records upsell accept + triggers conversion tracking" },
+            { method: "POST", path: "/api/pp-funnels/decline", desc: "Records decline for analytics" },
+          ].map(ep => (
+            <div key={ep.path} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
+              <span className="text-[10px] font-bold bg-indigo-500 text-white px-1.5 py-0.5 rounded">{ep.method}</span>
+              <div>
+                <div className="font-mono text-xs text-gray-800">{ep.path}</div>
+                <div className="text-xs text-gray-500">{ep.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Root Component ────────────────────────────── */
 export default function PPClient({ brandId, funnels, conversions }: Props) {
   const [tab, setTab] = useState<Tab>("Funnels");
@@ -1066,6 +1201,7 @@ export default function PPClient({ brandId, funnels, conversions }: Props) {
       {tab === "Analytics" && <PPAnalyticsTab funnels={funnels} conversions={conversions} />}
       {tab === "Settings" && <PPSettingsTab />}
       {tab === "Landing Page" && <PPLandingPageEditor brandId={brandId} funnels={funnels} />}
+      {tab === "Extension" && <ExtensionTab brandId={brandId} />}
     </div>
   );
 }

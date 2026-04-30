@@ -1,0 +1,11 @@
+{
+  "name": "post-purchase-upsell",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "shopify app build"
+  },
+  "dependencies": {
+    "@shopify/post-purchase-ui-extensions-react": "^0.13.0"
+  }
+}
