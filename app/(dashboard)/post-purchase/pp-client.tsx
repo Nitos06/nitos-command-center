@@ -887,6 +887,7 @@ function PPLandingPageEditor({ brandId, funnels }: { brandId: string; funnels: a
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [linkedFunnel, setLinkedFunnel] = useState<string>("");
 
   const funnelId = funnels[0]?.id;
 
@@ -942,14 +943,33 @@ function PPLandingPageEditor({ brandId, funnels }: { brandId: string; funnels: a
       await fetch('/api/pp-funnels/save-landing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ funnelId, sections }),
+        body: JSON.stringify({ funnelId, sections, linkedFunnelId: linkedFunnel }),
       });
     } catch {}
     setSaving(false);
   };
 
   return (
-    <div className="flex h-[calc(100vh-200px)] rounded-2xl overflow-hidden border border-gray-200">
+    <div className="flex flex-col h-[calc(100vh-200px)] rounded-2xl overflow-hidden border border-gray-200">
+      {/* Funnel Link Bar */}
+      <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border-b border-amber-100">
+        <Zap className="w-4 h-4 text-amber-500 shrink-0" />
+        <span className="text-xs font-medium text-amber-800">Link this landing page to a post-purchase funnel:</span>
+        <select
+          value={linkedFunnel}
+          onChange={e => setLinkedFunnel(e.target.value)}
+          className="text-xs border border-amber-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300 min-w-[160px]"
+        >
+          <option value="">— Select funnel —</option>
+          {funnels.map((f: any) => <option key={f.id} value={f.id}>{f.name}</option>)}
+        </select>
+        {linkedFunnel && (
+          <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">✓ Linked</span>
+        )}
+        <span className="ml-auto text-[10px] text-amber-600">When a customer triggers this funnel, they&apos;ll see this landing page as the upsell offer.</span>
+      </div>
+      {/* Main area: left preview + right editor */}
+      <div className="flex flex-1 overflow-hidden">
       {/* Left: Live preview */}
       <div className="flex-1 bg-gray-100 flex flex-col overflow-hidden">
         {/* Toolbar */}
@@ -983,10 +1003,14 @@ function PPLandingPageEditor({ brandId, funnels }: { brandId: string; funnels: a
           <button onClick={deleteSection} disabled={!selectedId} className="px-3 py-1.5 text-xs rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1">
             <Trash2 className="w-3.5 h-3.5" /> Delete
           </button>
-          <div className="flex-1" />
           <button onClick={handleSave} disabled={saving} className="px-4 py-1.5 text-xs rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition disabled:opacity-60">
             {saving ? 'Saving…' : 'Save Page'}
           </button>
+          <div className="ml-auto flex items-center gap-2 text-xs text-gray-500">
+            <Lock className="w-3.5 h-3.5" />
+            <span>Shopify post-purchase extension</span>
+            <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px] font-medium">Setup required</span>
+          </div>
         </div>
         {/* Page preview */}
         <div className="flex-1 overflow-y-auto p-4">
@@ -1014,6 +1038,7 @@ function PPLandingPageEditor({ brandId, funnels }: { brandId: string; funnels: a
         ) : (
           <LPSectionEditor section={selectedSection} onChange={updateSection} />
         )}
+      </div>
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ interface Props {
   quantityBreaks: any[];
 }
 
-const TABS = ["Bundles", "Quantity Breaks", "Cart Upsells", "Analytics", "Volume Discount"] as const;
+const TABS = ["Quantity Breaks", "Cart Upsells", "Analytics", "Volume Discount"] as const;
 type Tab = typeof TABS[number];
 
 type BundleType = "fixed" | "fbt" | "volume" | "bogo";
@@ -1688,7 +1688,7 @@ function VolumeBundleEditor({ brandId }: { brandId: string }) {
 
 /* ─── Root Component ────────────────────────────── */
 export default function BundlesClient({ brandId, bundles, quantityBreaks }: Props) {
-  const [tab, setTab] = useState<Tab>("Bundles");
+  const [tab, setTab] = useState<Tab>("Volume Discount");
 
   return (
     <div className="space-y-5">
@@ -1709,9 +1709,6 @@ export default function BundlesClient({ brandId, bundles, quantityBreaks }: Prop
         ))}
       </div>
 
-      {tab === "Bundles" && (
-        <BundlesTab brandId={brandId} initialBundles={bundles} />
-      )}
       {tab === "Quantity Breaks" && (
         <QtyBreaksTab brandId={brandId} quantityBreaks={quantityBreaks} />
       )}

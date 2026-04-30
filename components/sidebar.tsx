@@ -24,6 +24,7 @@ import {
   BookOpen,
   ChevronDown,
   Command,
+  Package,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -49,6 +50,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/quiz",          label: "Quiz",            icon: HelpCircle   },
       { href: "/affiliates",    label: "Affiliates",      icon: Users        },
       { href: "/bulk-editor",   label: "Bulk Editor",     icon: PenLine      },
+      { href: "/bundles",       label: "Bundles",         icon: Package      },
     ],
   },
   {
