@@ -10,7 +10,7 @@ import {
   RefreshCw, Minus, ArrowUpRight, Upload, Trash2, Edit2,
   Calendar, BarChart, Activity, Globe, Inbox, XCircle, Info, Code2,
 } from "lucide-react";
-import { MjmlDesigner } from "./mjml-designer";
+import MjmlDesigner from "./mjml-designer";
 import {
   LineChart, Line, AreaChart, Area, BarChart as RBarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
