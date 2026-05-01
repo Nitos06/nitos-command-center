@@ -14,7 +14,7 @@ export default async function PostPurchasePage() {
     { data: conversions },
   ] = await Promise.all([
     eq(supabase.from("pp_funnels").select("*, pp_steps(*)")).order("created_at", { ascending: false }),
-    eq(supabase.from("pp_conversions").select("*")).gte("converted_at", since30.toISOString()),
+    eq(supabase.from("pp_conversions").select("*")).gte("created_at", since30.toISOString()),
   ]);
 
   return (

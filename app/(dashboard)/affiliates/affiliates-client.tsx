@@ -199,7 +199,7 @@ const chartData = Array.from({ length: 30 }, (_, i) => ({
 
 // ─── TAB 1: Programs ──────────────────────────────────────────────────────────
 
-function ProgramsTab() {
+function ProgramsTab({ brandId }: { brandId: string }) {
   const [programs, setPrograms] = useState(mockPrograms);
   const [showNew, setShowNew] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<any>(null);
@@ -207,6 +207,36 @@ function ProgramsTab() {
 
   return (
     <div>
+      {/* How Affiliate Marketing works */}
+      <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 border border-indigo-100 rounded-2xl p-5 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-lg">👥</span>
+          <div>
+            <div className="text-sm font-semibold text-gray-800">How Affiliate Marketing works</div>
+            <div className="text-xs text-gray-500">Configure in app → connect to design → live on store</div>
+          </div>
+          <span className="ml-auto text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">Full pipeline</span>
+        </div>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-white rounded-xl p-3 border border-gray-100">
+            <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-1">① Configure</div>
+            <div className="text-xs text-gray-700">Create a program here (commission %, terms). Each brand has its own programs, affiliate codes, and tracking — fully isolated. Affiliates apply and get their unique referral link (yourstore.com/products/X?ref=THEIR_CODE).</div>
+          </div>
+          <div className="bg-white rounded-xl p-3 border border-gray-100">
+            <div className="text-[10px] font-bold text-purple-500 uppercase tracking-wider mb-1">② Connect</div>
+            <div className="text-xs text-gray-700">Copy the global tracking script from the embed panel at the bottom. Paste it in your cloud designer&apos;s Global Scripts section (runs on every page of your store). That&apos;s the only thing needed in the design.</div>
+          </div>
+          <div className="bg-white rounded-xl p-3 border border-gray-100">
+            <div className="text-[10px] font-bold text-green-500 uppercase tracking-wider mb-1">③ Live</div>
+            <div className="text-xs text-gray-700">When a visitor arrives via an affiliate link, a permanent cookie is set (no expiry). When they place an order, the commission is recorded automatically. Affiliates see their stats, you see the full breakdown in the Affiliates, Referrals, Payments, and Motivation tabs.</div>
+          </div>
+        </div>
+        <div className="bg-white/80 rounded-xl p-3 border border-gray-100">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">🤖 What the agent does automatically</div>
+          <div className="text-xs text-gray-600">Monitors affiliate performance daily. Reaches out automatically to dormant affiliates (no clicks in 14 days), identifies top performers for VIP upgrade, flags suspicious click patterns (bot traffic), and processes monthly PayPal payouts for approved commissions.</div>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-lg font-semibold text-gray-900">Programs</h2>
         <PrimaryBtn onClick={() => setShowNew(true)}><Plus size={14} className="inline mr-1" />New Program</PrimaryBtn>
@@ -262,6 +292,17 @@ function ProgramsTab() {
       )}
 
       {selectedProgram && <ProgramSlideOver program={selectedProgram} onClose={() => setSelectedProgram(null)} />}
+
+      <div className="bg-white rounded-2xl border border-gray-200 p-5 mt-4">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-sm font-semibold text-gray-800">📋 Install Tracking on Your Store</span>
+          <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Add Once — Tracks Everything</span>
+        </div>
+        <p className="text-xs text-gray-500 mb-3">Add this to your page builder&apos;s <strong>global scripts</strong> (runs on every page). It reads <code className="bg-gray-100 px-1 rounded">?ref=CODE</code> from URLs and tracks affiliate clicks automatically.</p>
+        <div className="bg-gray-900 text-green-400 text-xs font-mono p-3 rounded-xl overflow-x-auto whitespace-pre mb-2">{`<!-- Add to Global Scripts (every page) -->\n<script src="https://nitaiecompro-nine.vercel.app/widgets/affiliates.js"\n  data-affiliates="${brandId}"></script>`}</div>
+        <p className="text-xs text-gray-500 mb-1">Affiliate links format: <code className="bg-gray-100 px-1 rounded">yourstore.com/products/X?ref=AFFILIATE_CODE</code></p>
+        <p className="text-xs text-gray-400">The script sets a 30-day cookie and records the click in your dashboard. Conversions are tracked when orders include the affiliate code.</p>
+      </div>
     </div>
   );
 }
@@ -435,7 +476,7 @@ function ProgramSlideOver({ program, onClose }: { program: any; onClose: () => v
 
 // ─── TAB 2: Affiliates ────────────────────────────────────────────────────────
 
-function AffiliatesTab() {
+function AffiliatesTab({ affiliates, clicks, conversions }: { affiliates: any[]; clicks: any[]; conversions: any[] }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [showAdd, setShowAdd] = useState(false);
@@ -446,10 +487,34 @@ function AffiliatesTab() {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [newAffiliate, setNewAffiliate] = useState({ firstName: "", lastName: "", email: "", program: "Default Program", commission: "", status: "active", sendInvite: true });
 
+  // Build click counts and conversion totals per affiliate
+  const clicksByAffiliate = clicks.reduce((acc: any, c: any) => {
+    acc[c.affiliate_id] = (acc[c.affiliate_id] || 0) + 1;
+    return acc;
+  }, {});
+  const convsByAffiliate = conversions.reduce((acc: any, c: any) => {
+    if (!acc[c.affiliate_id]) acc[c.affiliate_id] = { count: 0, revenue: 0, commission: 0 };
+    acc[c.affiliate_id].count++;
+    acc[c.affiliate_id].revenue += Number(c.order_value || 0);
+    acc[c.affiliate_id].commission += Number(c.commission_amount || 0);
+    return acc;
+  }, {});
+
+  const enriched = affiliates.map(a => ({
+    ...a,
+    displayName: a.name || a.email,
+    computedStatus: a.status || "pending",
+    computedClicks: clicksByAffiliate[a.id] || 0,
+    computedReferrals: convsByAffiliate[a.id]?.count || 0,
+    computedRevenue: convsByAffiliate[a.id]?.revenue || 0,
+    computedCommission: convsByAffiliate[a.id]?.commission || 0,
+    lastActive: a.created_at ? new Date(a.created_at).toLocaleDateString() : "—",
+  }));
+
   const statuses = ["All", "Active", "Pending", "Paused", "Banned"];
-  const filtered = mockAffiliates.filter(a => {
-    if (statusFilter !== "All" && a.status !== statusFilter.toLowerCase()) return false;
-    if (search && !a.name.toLowerCase().includes(search.toLowerCase()) && !a.email.toLowerCase().includes(search.toLowerCase())) return false;
+  const filtered = enriched.filter(a => {
+    if (statusFilter !== "All" && a.computedStatus !== statusFilter.toLowerCase()) return false;
+    if (search && !a.displayName.toLowerCase().includes(search.toLowerCase()) && !a.email?.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
@@ -485,15 +550,15 @@ function AffiliatesTab() {
               <tr key={a.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedAffiliate(a)}>
                 <td className="px-4 py-3" onClick={e => e.stopPropagation()}><input type="checkbox" className="rounded border-gray-300" /></td>
                 <td className="px-4 py-3">
-                  <div className="font-medium text-gray-900">{a.name}</div>
+                  <div className="font-medium text-gray-900">{a.displayName}</div>
                   <div className="text-xs text-gray-500">{a.email}</div>
                 </td>
-                <td className="px-4 py-3 text-gray-600 text-xs">{a.program}</td>
-                <td className="px-4 py-3"><StatusBadge status={a.status} /></td>
-                <td className="px-4 py-3 text-gray-700">{a.clicks}</td>
-                <td className="px-4 py-3 text-gray-700">{a.referrals}</td>
-                <td className="px-4 py-3 text-gray-700">${a.revenue.toLocaleString()}</td>
-                <td className="px-4 py-3 text-gray-700">${a.commission}</td>
+                <td className="px-4 py-3 text-gray-600 text-xs">{a.program || "—"}</td>
+                <td className="px-4 py-3"><StatusBadge status={a.computedStatus} /></td>
+                <td className="px-4 py-3 text-gray-700">{a.computedClicks}</td>
+                <td className="px-4 py-3 text-gray-700">{a.computedReferrals}</td>
+                <td className="px-4 py-3 text-gray-700">${a.computedRevenue.toLocaleString()}</td>
+                <td className="px-4 py-3 text-gray-700">${a.computedCommission.toFixed(2)}</td>
                 <td className="px-4 py-3 text-gray-500 text-xs">{a.lastActive}</td>
                 <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                   <div className="relative">
@@ -602,7 +667,8 @@ function AffiliatesTab() {
 
 function AffiliateSlideOver({ affiliate, onClose }: { affiliate: any; onClose: () => void }) {
   const [tab, setTab] = useState("Stats");
-  const initials = affiliate.name.split(" ").map((n: string) => n[0]).join("").toUpperCase();
+  const displayName = affiliate.displayName || affiliate.name || affiliate.email || "Affiliate";
+  const initials = displayName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
     <SlideOver title="" onClose={onClose}>
@@ -610,9 +676,9 @@ function AffiliateSlideOver({ affiliate, onClose }: { affiliate: any; onClose: (
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg">{initials}</div>
           <div className="flex-1">
-            <p className="font-semibold text-gray-900 text-base">{affiliate.name}</p>
+            <p className="font-semibold text-gray-900 text-base">{displayName}</p>
             <p className="text-sm text-gray-500">{affiliate.email}</p>
-            <div className="flex items-center gap-2 mt-1"><StatusBadge status={affiliate.status} /><span className="text-xs text-gray-400">{affiliate.program}</span></div>
+            <div className="flex items-center gap-2 mt-1"><StatusBadge status={affiliate.computedStatus || affiliate.status || "pending"} /><span className="text-xs text-gray-400">{affiliate.program}</span></div>
           </div>
         </div>
       </div>
@@ -621,7 +687,7 @@ function AffiliateSlideOver({ affiliate, onClose }: { affiliate: any; onClose: (
         {tab === "Stats" && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-3">
-              {[["Clicks", affiliate.clicks], ["Referrals", affiliate.referrals], ["Revenue", `$${affiliate.revenue.toLocaleString()}`], ["Commission", `$${affiliate.commission}`]].map(([label, val]) => (
+              {[["Clicks", affiliate.computedClicks ?? affiliate.clicks ?? 0], ["Referrals", affiliate.computedReferrals ?? affiliate.referrals ?? 0], ["Revenue", `$${(affiliate.computedRevenue ?? affiliate.revenue ?? 0).toLocaleString()}`], ["Commission", `$${(affiliate.computedCommission ?? affiliate.commission ?? 0).toFixed(2)}`]].map(([label, val]) => (
                 <div key={label as string} className="bg-gray-50 rounded-xl p-3 text-center">
                   <p className="text-xs text-gray-500 mb-1">{label as string}</p>
                   <p className="text-lg font-bold text-gray-900">{val as string}</p>
@@ -811,14 +877,31 @@ function ReferralsTab() {
 
 // ─── TAB 4: Payments ─────────────────────────────────────────────────────────
 
-function PaymentsTab() {
+function PaymentsTab({ affiliates, payouts, conversions }: { affiliates: any[]; payouts: any[]; conversions: any[] }) {
   const [showPay, setShowPay] = useState<any>(null);
   const [payMethod, setPayMethod] = useState("paypal");
   const [autoPayoutEnabled, setAutoPayoutEnabled] = useState(false);
   const [schedule, setSchedule] = useState("approval");
   const [threshold, setThreshold] = useState("50");
 
-  const totalUnpaid = mockUnpaid.reduce((s, u) => s + u.amount, 0);
+  // Build affiliate name lookup
+  const affiliateById: Record<string, string> = affiliates.reduce((acc: any, a: any) => {
+    acc[a.id] = a.name || a.email || a.id;
+    return acc;
+  }, {});
+
+  // Compute unpaid commissions per affiliate (conversions not yet paid)
+  const paidAffiliateIds = new Set(payouts.filter(p => p.status === "paid").map((p: any) => p.affiliate_id));
+  const unpaidByAffiliate: Record<string, { name: string; amount: number; referrals: number }> = {};
+  conversions.forEach((c: any) => {
+    if (c.status === "paid") return;
+    const name = affiliateById[c.affiliate_id] || c.affiliate_id || "Unknown";
+    if (!unpaidByAffiliate[c.affiliate_id]) unpaidByAffiliate[c.affiliate_id] = { name, amount: 0, referrals: 0 };
+    unpaidByAffiliate[c.affiliate_id].amount += Number(c.commission_amount || 0);
+    unpaidByAffiliate[c.affiliate_id].referrals++;
+  });
+  const unpaidList = Object.entries(unpaidByAffiliate).map(([id, data]) => ({ affiliateId: id, ...data }));
+  const totalUnpaid = unpaidList.reduce((s, u) => s + u.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -836,14 +919,16 @@ function PaymentsTab() {
             </div>
           </div>
           <div className="divide-y divide-gray-100">
-            {mockUnpaid.map(u => (
-              <div key={u.affiliate} className="flex items-center justify-between py-3">
+            {unpaidList.length === 0 ? (
+              <p className="text-sm text-gray-400 py-4 text-center">No unpaid commissions</p>
+            ) : unpaidList.map(u => (
+              <div key={u.affiliateId} className="flex items-center justify-between py-3">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{u.affiliate}</p>
+                  <p className="text-sm font-medium text-gray-900">{u.name}</p>
                   <p className="text-xs text-gray-500">{u.referrals} referrals</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-semibold text-gray-900">${u.amount}</span>
+                  <span className="font-semibold text-gray-900">${u.amount.toFixed(2)}</span>
                   <PrimaryBtn onClick={() => setShowPay(u)} className="px-3 py-1.5 text-xs">Pay</PrimaryBtn>
                 </div>
               </div>
@@ -863,12 +948,14 @@ function PaymentsTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {mockPayouts.map(p => (
+              {payouts.length === 0 ? (
+                <tr><td colSpan={6} className="py-4 text-center text-sm text-gray-400">No payouts yet</td></tr>
+              ) : payouts.map(p => (
                 <tr key={p.id}>
-                  <td className="py-2 pr-2 text-xs text-gray-500">{p.date}</td>
-                  <td className="py-2 pr-2 text-gray-700 text-xs">{p.affiliate}</td>
-                  <td className="py-2 pr-2 font-medium">${p.amount}</td>
-                  <td className="py-2 pr-2"><span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">{p.method}</span></td>
+                  <td className="py-2 pr-2 text-xs text-gray-500">{p.created_at ? new Date(p.created_at).toLocaleDateString() : "—"}</td>
+                  <td className="py-2 pr-2 text-gray-700 text-xs">{affiliateById[p.affiliate_id] || p.affiliate_id || "—"}</td>
+                  <td className="py-2 pr-2 font-medium">${Number(p.amount || 0).toFixed(2)}</td>
+                  <td className="py-2 pr-2"><span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">{p.method || "PayPal"}</span></td>
                   <td className="py-2 pr-2"><StatusBadge status={p.status} /></td>
                   <td className="py-2"><button className="text-gray-400 hover:text-gray-600"><Download size={13} /></button></td>
                 </tr>
@@ -905,12 +992,12 @@ function PaymentsTab() {
       </Card>
 
       {showPay && (
-        <Modal title={`Pay ${showPay.affiliate}`} onClose={() => setShowPay(null)}>
+        <Modal title={`Pay ${showPay.name || showPay.affiliate || "Affiliate"}`} onClose={() => setShowPay(null)}>
           <div><Label>Payment method</Label>
             <Select value={payMethod} onChange={setPayMethod} options={[{ value: "paypal", label: "PayPal" }, { value: "bank", label: "Bank Transfer" }, { value: "credit", label: "Store Credit" }, { value: "manual", label: "Manual" }]} />
           </div>
           <div><Label>Amount</Label>
-            <div className="relative"><span className="absolute left-3 top-2.5 text-gray-400 text-sm">$</span><Input type="number" value={showPay.amount} className="pl-7" /></div>
+            <div className="relative"><span className="absolute left-3 top-2.5 text-gray-400 text-sm">$</span><Input type="number" value={(showPay.amount || 0).toFixed(2)} className="pl-7" /></div>
           </div>
           <div className="flex justify-end gap-3">
             <OutlineBtn onClick={() => setShowPay(null)}>Cancel</OutlineBtn>
@@ -1210,7 +1297,7 @@ function MotivationCard({ icon, title, desc, btnText, onClick }: { icon: React.R
 
 // ─── TAB 6: Motivation ────────────────────────────────────────────────────────
 
-function MotivationTab() {
+function MotivationTab({ affiliates, conversions }: { affiliates: any[]; conversions: any[] }) {
   const [showCoupon, setShowCoupon] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
   const [showGift, setShowGift] = useState(false);
@@ -1218,8 +1305,97 @@ function MotivationTab() {
   const [welcomeGift, setWelcomeGift] = useState(false);
   const [milestoneGift, setMilestoneGift] = useState(false);
 
+  // Compute top 5 affiliates by total commission
+  const affiliateRevenue = conversions.reduce((acc: any, c: any) => {
+    acc[c.affiliate_id] = (acc[c.affiliate_id] || 0) + Number(c.commission_amount || 0);
+    return acc;
+  }, {});
+  const top5Affiliates = affiliates
+    .map(a => ({ ...a, totalCommission: affiliateRevenue[a.id] || 0, displayName: a.name || a.email || "—" }))
+    .sort((a, b) => b.totalCommission - a.totalCommission)
+    .slice(0, 5);
+
+  // Compute top 5 products from conversions
+  const productRevenue: Record<string, { title: string; revenue: number; count: number }> = {};
+  conversions.forEach((c: any) => {
+    const key = c.product_title || c.product_id || "Unknown";
+    if (!productRevenue[key]) productRevenue[key] = { title: key, revenue: 0, count: 0 };
+    productRevenue[key].revenue += Number(c.order_value || 0);
+    productRevenue[key].count++;
+  });
+  const top5Products = Object.values(productRevenue)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5);
+
+  const medals = ["🥇", "🥈", "🥉"];
+  const hasData = affiliates.length > 0 || conversions.length > 0;
+
   return (
     <div className="space-y-8">
+
+      {/* Top Affiliates Leaderboard */}
+      <div>
+        <p className="font-bold text-gray-900 mb-4">Top 5 Affiliates</p>
+        {!hasData ? (
+          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-sm text-gray-400">No affiliate data yet.</div>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  {["Rank", "Affiliate", "Commission Earned", "Referrals"].map(h => (
+                    <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {top5Affiliates.map((a, i) => (
+                  <tr key={a.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-lg">{medals[i] || `#${i + 1}`}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{a.displayName}</td>
+                    <td className="px-4 py-3 text-gray-700">${a.totalCommission.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-gray-600">{conversions.filter(c => c.affiliate_id === a.id).length}</td>
+                  </tr>
+                ))}
+                {top5Affiliates.length === 0 && (
+                  <tr><td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-400">No affiliates yet</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Top Products */}
+      <div>
+        <p className="font-bold text-gray-900 mb-4">Top 5 Products (via Affiliates)</p>
+        {top5Products.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-sm text-gray-400">No product data yet.</div>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  {["#", "Product", "Revenue (Affiliate)", "# Orders"].map(h => (
+                    <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {top5Products.map((p, i) => (
+                  <tr key={p.title} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-500 text-xs">#{i + 1}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{p.title}</td>
+                    <td className="px-4 py-3 text-gray-700">${p.revenue.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-600">{p.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <div>
         <p className="font-bold text-gray-900 mb-4">Promotional resources</p>
         <div className="grid grid-cols-2 gap-4">
@@ -1534,9 +1710,151 @@ function AnalyticsTab({ clicks, conversions }: { clicks: any[]; conversions: any
   );
 }
 
+// ─── ROI Calculator Tab ───────────────────────────────────────────────────────
+
+function AffiliateROICalculator() {
+  const [monthlyOrders, setMonthlyOrders] = useState(200);
+  const [aov, setAov] = useState(75);
+  const [trafficShare, setTrafficShare] = useState(5);
+  const [commissionRate, setCommissionRate] = useState(20);
+  const [grossMargin, setGrossMargin] = useState(50);
+
+  const affiliateSales = Math.round(monthlyOrders * (trafficShare / 100));
+  const affiliateRevenue = affiliateSales * aov;
+  const commissionPaid = affiliateRevenue * (commissionRate / 100);
+  const grossProfit = affiliateRevenue * (grossMargin / 100);
+  const netMonthlyProfit = grossProfit - commissionPaid;
+  const annualProfit = netMonthlyProfit * 12;
+  const roiMultiple = commissionPaid > 0 ? (affiliateRevenue / commissionPaid) : 0;
+
+  const inputClass = "w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500";
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Left column — inputs */}
+      <div className="bg-gray-900 rounded-2xl p-6 text-white">
+        <p className="text-gray-400 text-xs uppercase tracking-wider mb-4">Your Program Numbers</p>
+
+        <div className="space-y-5">
+          {/* Monthly Orders */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Monthly Orders</label>
+            <p className="text-xs text-gray-500 mb-2">Average monthly store orders</p>
+            <input
+              type="number"
+              value={monthlyOrders}
+              onChange={e => setMonthlyOrders(Number(e.target.value))}
+              className={inputClass}
+            />
+          </div>
+
+          {/* AOV */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Average Order Value ($)</label>
+            <p className="text-xs text-gray-500 mb-2">Your average order value</p>
+            <input
+              type="number"
+              value={aov}
+              onChange={e => setAov(Number(e.target.value))}
+              className={inputClass}
+            />
+          </div>
+
+          {/* Traffic Share */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Affiliate Traffic Share (%)</label>
+            <p className="text-xs text-gray-500 mb-1">% of sales you expect from affiliates</p>
+            <p className="text-xs text-indigo-400 mb-2">Industry avg: 5-10%</p>
+            <input
+              type="number"
+              value={trafficShare}
+              onChange={e => setTrafficShare(Number(e.target.value))}
+              className={inputClass}
+            />
+          </div>
+
+          {/* Commission Rate */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Commission Rate (%)</label>
+            <p className="text-xs text-gray-500 mb-1">Commission paid to affiliates</p>
+            <p className="text-xs text-indigo-400 mb-2">30-50% of net margin is standard</p>
+            <input
+              type="number"
+              value={commissionRate}
+              onChange={e => setCommissionRate(Number(e.target.value))}
+              className={inputClass}
+            />
+          </div>
+
+          {/* Gross Margin */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Product Gross Margin (%)</label>
+            <p className="text-xs text-gray-500 mb-2">Your gross margin after COGS</p>
+            <input
+              type="number"
+              value={grossMargin}
+              onChange={e => setGrossMargin(Number(e.target.value))}
+              className={inputClass}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Right column — results */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        {/* Hero annual profit */}
+        <div className="text-center pb-6">
+          <p className="text-5xl font-bold text-green-600">
+            {annualProfit.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
+          </p>
+          <p className="text-gray-500 text-sm mt-2">/year net profit from affiliates</p>
+        </div>
+
+        <hr className="border-gray-200 mb-2" />
+
+        {/* Breakdown rows */}
+        <div>
+          <div className="flex justify-between items-center py-3 border-b border-gray-100">
+            <span className="text-sm text-gray-600">Affiliate orders / month</span>
+            <span className="text-sm font-semibold text-gray-900">{affiliateSales}</span>
+          </div>
+          <div className="flex justify-between items-center py-3 border-b border-gray-100">
+            <span className="text-sm text-gray-600">Monthly affiliate revenue</span>
+            <span className="text-sm font-semibold text-gray-900">${affiliateRevenue.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center py-3 border-b border-gray-100">
+            <span className="text-sm text-gray-600">Monthly commission cost</span>
+            <span className="text-sm font-semibold text-red-500">-${Math.round(commissionPaid).toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center py-3 border-b border-gray-100">
+            <span className="text-sm text-gray-600">Monthly net profit</span>
+            <span className="text-sm font-semibold text-green-600">${Math.round(netMonthlyProfit).toLocaleString()}</span>
+          </div>
+        </div>
+
+        {/* Dark callout card */}
+        <div className="bg-gray-900 rounded-xl p-4 mt-4">
+          {roiMultiple >= 1 && (
+            <>
+              <p className="text-3xl font-bold text-white">{roiMultiple.toFixed(1)}x ROI</p>
+              <p className="text-gray-400 text-sm mt-1">You earn ${roiMultiple.toFixed(1)} for every $1 paid in commission</p>
+              <p className="text-gray-500 text-xs mt-1">UpPromote benchmark: $12 return per $1 spent</p>
+            </>
+          )}
+          <p className="text-gray-500 text-xs mt-2">Industry targets: 3-8% of total revenue, 20-30% active affiliate ratio</p>
+        </div>
+
+        <p className="text-gray-400 text-xs mt-4">
+          Estimates based on industry benchmarks. Actual results depend on affiliate quality and offer strength.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const TABS = ["Programs", "Affiliates", "Referrals", "Payments", "Display", "Motivation", "Reach Out", "Analytics"] as const;
+const TABS = ["Programs", "Affiliates", "Referrals", "Payments", "Motivation", "Reach Out", "Analytics", "ROI Calculator"] as const;
 type Tab = typeof TABS[number];
 
 export default function AffiliatesClient({
@@ -1574,14 +1892,14 @@ export default function AffiliatesClient({
 
       {/* Content */}
       <div className="max-w-screen-xl mx-auto px-6 py-6">
-        {activeTab === "Programs" && <ProgramsTab />}
-        {activeTab === "Affiliates" && <AffiliatesTab />}
+        {activeTab === "Programs" && <ProgramsTab brandId={brandId} />}
+        {activeTab === "Affiliates" && <AffiliatesTab affiliates={affiliates} clicks={clicks} conversions={conversions} />}
         {activeTab === "Referrals" && <ReferralsTab />}
-        {activeTab === "Payments" && <PaymentsTab />}
-        {activeTab === "Display" && <DisplayTab />}
-        {activeTab === "Motivation" && <MotivationTab />}
+        {activeTab === "Payments" && <PaymentsTab affiliates={affiliates} payouts={payouts} conversions={conversions} />}
+        {activeTab === "Motivation" && <MotivationTab affiliates={affiliates} conversions={conversions} />}
         {activeTab === "Reach Out" && <ReachOutTab />}
         {activeTab === "Analytics" && <AnalyticsTab clicks={clicks} conversions={conversions} />}
+        {activeTab === "ROI Calculator" && <AffiliateROICalculator />}
       </div>
     </div>
   );

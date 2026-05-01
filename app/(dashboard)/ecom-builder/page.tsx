@@ -77,6 +77,67 @@ https://docs.google.com/document/d/1tCuhEFYt_vDsu4wUfyR19bpDOdzYjQ4t/edit?usp=sh
   },
   {
     number: "3.",
+    title: "Product Research:",
+    intro: "",
+    steps: [
+      {
+        label: "Step 1 — AI Product Research",
+        content: `You are an expert at finding winning products. Based on our competitor research and market research — with full research of every opportunity and aspect in our niche — do a product research and find the overall products we need to aim to sell on our website.
+
+Find 10 products. Not specific products but overall 10 product categories/directions.
+
+Also add 10 ideas for products that don't seem to appear online but you have an idea for — products that fit into the same category that could be created for the first time.
+
+*After user reviews and approves — move to Step 2`,
+      },
+      {
+        label: "Step 2 — Source on 1688 / Alibaba / CJDropshipping",
+        content: `Based on the 10 product directions from Step 1, go and find real products on:
+
+• 1688.com → focus on cost + supplier quality
+• Alibaba.com → focus on bulk pricing + customization options
+• CJDropshipping.com → focus on ready-to-test products + faster shipping
+
+For each platform, find the best matching products and note: supplier rating, MOQ, estimated cost, shipping time, and customization options.
+
+*Compile your findings and send them to the coworker (Step 3) for evaluation`,
+      },
+      {
+        label: "Step 3 — Coworker Evaluation",
+        content: `Send your sourcing findings to coworker with this prompt:
+
+"Again, follow the table of rules of finding a winning product below and tell me what you think of my findings. Rate each product from 1 to 10."
+
+🔎 Winning Product Criteria (Ecom Sourcing)
+
+#  | Rule                        | What to Look For                                              | Why It Matters
+1  | Solves a real problem        | Clear pain (e.g. saves time, reduces stress, fixes inconvenience) | Problem-driven products sell easier than "nice to have"
+2  | Strong "wow" factor          | Visually impressive or instantly understandable benefit       | Helps with ads (especially TikTok/UGC)
+3  | Price vs cost margin         | At least 3x markup (e.g. $8 cost → $24+ sell)                | Leaves room for ads + profit
+4  | Not saturated (yet)          | Some competitors exist, but not everywhere                    | You want validation, not overcrowding
+5  | Easy to ship                 | Lightweight, small, not fragile                               | Reduces refunds + shipping headaches
+6  | No brand dominance           | Not controlled by big brands                                  | Hard to compete if customers trust existing brands
+7  | Emotion-driven               | Triggers fear, frustration, vanity, convenience               | Emotional buying = higher conversion
+8  | Repeat potential or upsells  | Can bundle or sell variations                                 | Increases AOV (average order value)
+9  | Great ad potential           | Can create great ads and a lot of media                       | Content is the fuel for paid growth
+10 | Clear target audience        | Easy to say "this is for X people"                            | Makes marketing much easier
+11 | Customization potential      | Branding, packaging, variations                               | Helps you stand out from competitors
+12 | Not easily found locally     | Hard to buy in nearby stores                                  | Reduces price comparison
+13 | Longevity balance            | Not just a 2-week trend                                       | More stable business
+14 | Low return risk              | Simple usage, low defect chance                               | Protects your margins
+
+─────────────────────────────────────────
+How to actually use this (important):
+
+When you're browsing:
+• On 1688 → focus on cost + supplier quality
+• On Alibaba → focus on bulk pricing + customization
+• On CJdropshipping → focus on ready-to-test products + faster shipping`,
+      },
+    ],
+  },
+  {
+    number: "4.",
     title: "Branding:",
     intro: "",
     steps: [
@@ -247,7 +308,7 @@ Strict Instructions:
     ],
   },
   {
-    number: "4.",
+    number: "5.",
     title: "Building websites:",
     intro: `When we are want to build website we will want to use the 4 steps to generate the final output.
 The first move is to prompt to claude the following`,
@@ -259,31 +320,43 @@ The first move is to prompt to claude the following`,
 *If agreed by user - follow to next`,
       },
       {
-        label: "Prompt 2",
-        content: `"Awesome, I want to create a video that will play in the background of the hero section and it will just be on an endless loop. I need a video idea that will fit the vibe and will have a wow factor for people that go to our website. We should also be thinking about the text that will be displayed on the hero section. The background video will not include any text, but it has to have room where we could insert a block for the hero text and subtext.
-What I need is for you to give me an image prompt for this background and then give me a video prompt in order to animate that background in a way that, like I said, isn't distracting but has a wow factor and fits the vibe of what we're trying to sell here, the brand we're trying to sell. The video prompt should not have any camera movement because we want the start frame and the end frame for this video to be the same so it feels more like an endless loop."
+        label: "Step 2 — Create Visuals & Animations",
+        content: `Use KIE AI to create animated images and add them to Claude Design.
+Use Jitter Videos AI for motion graphics and animated sections.
+Use Gruns Emails for infographics and visual assets.
 
-*copt the image prompt if aggreed and paste in higgsfield then use image and paste in image to video and add the video prompt.`,
+Add all created visuals into Claude Design alongside the layout spec from Prompt 1.`,
       },
       {
-        label: "Step 3",
-        content: `now we need to go to claude design and start with a "high fidelity" prototyp. We will anime it based on our brand name.`,
-      },
-      {
-        label: "Step 4",
-        content: `we will build a sketch of our full website based on the "At least 75%" of the website building rules (see later in doc). After this we will add the mp4 video we created in prompt 2
+        label: "Step 3 — Convert to Shopify Theme Code",
+        content: `Once the design is approved in Claude Design, request the full code export and then prompt:
 
--User\\claude needs to go to motions.ai and choose two motions & choose other websites liked parts .`,
-      },
-      {
-        label: "Prompt 3 (Step 5)",
-        content: `"Hey Claude Design, I've given you a couple things. I've got a sketch which is just my basically idea for the website. There's going to be a lot going on , which you will be on your own to figure out what that should look like (play kinda with the rules). I've given you the video. This is a video that I want you to be playing on an endless loop in the background and you should see that the hero text will be on the left side compared to that, i also added animation from motions Ai that i liked + other websites part i loved (make them relevant to my business). And then I added the following: product i sell is[X], the brand rules are[X], the marketing research we did and the potential avatar of a customer are [X] & [X], our competitors we found from the competitors research are [X]. What should the hero section and the actual copy be like? What should the vibe be like? Help me build an example brand website and give me a spec for this website. Every website should follow at least 75% of this following building rules [X]."
+"You are a Shopify theme developer. Convert this entire design to a valid Shopify theme. Specifically:
+- Replace all hardcoded product titles, prices, images, and descriptions with the correct Shopify Liquid variables ({{ product.title }}, {{ product.price | money }}, {{ product.featured_image | img_url: 'master' }}, etc.)
+- Wire every Add to Cart button to Shopify's AJAX cart API (/cart/add.js) and trigger the cart drawer to open on success
+- Convert the homepage to sections/index.json, the product page to sections/main-product.liquid, the collection page to sections/main-collection.liquid
+- Keep all fonts, colors, spacing, animations, and visual design exactly as built — do not change anything visual
+- Do not remove or modify any API calls that are already wired (quiz, bundles, gift, affiliates)
+- Push the final theme files via the Shopify Theme MCP"
 
-*now user needs to play around with it based on his preferences & to tell claude to optimize it for the phone.`,
+*Only send to Shopify after all apps (quiz, bundles, gift, affiliates) are tested and working`,
       },
       {
-        label: "Step 6",
-        content: `claude needs to push to shopify using shopify full access frontend + backend mcp`,
+        label: "Step 4 — Add nitaiecompro Apps Natively *",
+        content: `*After the theme is live on Shopify:
+
+Go to Shopify Admin → Online Store → Themes → Customize → open the theme editor.
+
+The nitaiecompro app (once registered as a Shopify native app) will appear as blocks in the theme editor. Add them to the relevant pages:
+
+• Quiz block → Homepage (as lead magnet section)
+• Bundle block → Product page (below Add to Cart)
+• Gift progress bar block → Cart page
+• Reviews block → Homepage + Product page
+• Post-Purchase funnel → Checkout (auto-triggered, no placement needed)
+• Affiliates tracking → Injected globally on all pages automatically
+
+All blocks are configured in the nitaiecompro dashboard — the theme editor just controls WHERE they appear.`,
       },
     ],
   },

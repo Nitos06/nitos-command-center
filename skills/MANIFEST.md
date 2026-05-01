@@ -62,6 +62,12 @@ Single index of every skill in `paidads/skills/`. Source of truth for the cron r
 | `analytics` | `/analytics {today\|7d\|30d}` |
 | `advisory` | `/advise {question}` |
 | `dashboard-bridge` | `/dashboard refresh` |
+| `quiz-strategy` | `/quiz {build|audit|questions|email-gate|recommend|distribute}` |
+| `quiz-email-flows` | `/quiz-email {setup|segment|results-flow|welcome|replenishment}` |
+| `quiz-recommendations` | `/quiz-rec {map|test|bundle|tier}` |
+| `mjml-email` | `/mjml {quiz-results|welcome|review-request|abandoned-cart|campaign|compile}` |
+| `affiliate-strategy` | `/affiliate {setup|recruit|commission|audit|agreement|customers|launch-checklist}` |
+| `affiliate-setup` | `/affiliate-setup {phase1|phase2|phase3|launch|monitor}` |
 
 ## Dependency graph (chain-contract via `state/{skill}/`)
 
@@ -93,6 +99,14 @@ dashboard:
                                  → state/dashboard/{feed,timeline,alerts,health}.json
                                  → Supabase agent_kpi_history + agent_decisions
                                  → IU dashboard (Next.js in paidads/app/) reads
+
+quiz pipeline:
+  quiz-strategy (build) → quiz-recommendations (match) → quiz-email-flows (nurture)
+  quiz-email-flows ──→ email-marketing (SES delivery via /api/quiz/submit)
+
+affiliate pipeline:
+  affiliate-setup (launch) → affiliate-strategy (ongoing management)
+  affiliate-strategy ──→ email-marketing (affiliate invite flows)
 ```
 
 ## Cross-Telegram routing (finance-il Job D)

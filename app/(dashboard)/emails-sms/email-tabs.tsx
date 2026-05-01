@@ -11,6 +11,7 @@ const TABS = [
   { id: "segments",      label: "Segments",        icon: Users        },
   { id: "campaigns",     label: "Campaigns",       icon: Mail         },
   { id: "deliverability",label: "Deliverability",  icon: TrendingUp   },
+  { id: "roi",           label: "ROI Calculator",  icon: TrendingUp   },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
@@ -220,6 +221,196 @@ function EmailCalendar({ campaigns, brandId }: { campaigns: any[]; brandId: stri
   );
 }
 
+/* ─── ROI Calculator ────────────────────────── */
+function EmailROICalculator() {
+  const [channel, setChannel] = useState<"email" | "email_sms">("email");
+  const [activeProfiles, setActiveProfiles] = useState(5000);
+  const [newVisitors, setNewVisitors] = useState(10000);
+  const [aov, setAov] = useState(65);
+  const [ordersPerMonth, setOrdersPerMonth] = useState(1.2);
+  const [campaignsPerMonth, setCampaignsPerMonth] = useState(4);
+  const [flowRecipients, setFlowRecipients] = useState(1000);
+  const [smsSubscribers, setSmsSubscribers] = useState(1000);
+
+  // Computed values (live)
+  const newSubRate = 0.02;
+  const newSubsPerMonth = newVisitors * newSubRate;
+  const newSubRevenue = newSubsPerMonth * 12 * aov * ordersPerMonth * 0.15;
+
+  const campaignRevenue = activeProfiles * campaignsPerMonth * 0.22 * 0.025 * 0.025 * aov * 12;
+
+  const flowRevenue = flowRecipients * 0.35 * 0.05 * 0.04 * aov * 12;
+
+  const smsRevenue =
+    channel === "email_sms" ? smsSubscribers * 0.08 * 0.03 * aov * 12 : 0;
+
+  const totalAnnual = newSubRevenue + campaignRevenue + flowRevenue + smsRevenue;
+
+  const inputClass =
+    "w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300";
+
+  const labelClass = "block text-xs text-gray-500 mb-1";
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+      {/* Left column — inputs */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <p className="text-xs text-gray-500 uppercase tracking-wider mb-4">
+          Tell Us About Your Email Program
+        </p>
+
+        {/* Channel toggle */}
+        <div className="flex gap-2 mb-5">
+          <button
+            onClick={() => setChannel("email")}
+            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
+              channel === "email"
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            Email Only
+          </button>
+          <button
+            onClick={() => setChannel("email_sms")}
+            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
+              channel === "email_sms"
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            Email + SMS
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className={labelClass}># of active email subscribers</label>
+            <input
+              type="number"
+              value={activeProfiles}
+              onChange={(e) => setActiveProfiles(Number(e.target.value))}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Monthly website visitors</label>
+            <input
+              type="number"
+              value={newVisitors}
+              onChange={(e) => setNewVisitors(Number(e.target.value))}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Average order value</label>
+            <input
+              type="number"
+              value={aov}
+              onChange={(e) => setAov(Number(e.target.value))}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Avg orders per customer per month</label>
+            <input
+              type="number"
+              step="0.1"
+              value={ordersPerMonth}
+              onChange={(e) => setOrdersPerMonth(Number(e.target.value))}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Campaigns sent per month</label>
+            <input
+              type="number"
+              value={campaignsPerMonth}
+              onChange={(e) => setCampaignsPerMonth(Number(e.target.value))}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Recipients in automated flows per month</label>
+            <input
+              type="number"
+              value={flowRecipients}
+              onChange={(e) => setFlowRecipients(Number(e.target.value))}
+              className={inputClass}
+            />
+          </div>
+          {channel === "email_sms" && (
+            <div>
+              <label className={labelClass}>Active SMS subscribers</label>
+              <input
+                type="number"
+                value={smsSubscribers}
+                onChange={(e) => setSmsSubscribers(Number(e.target.value))}
+                className={inputClass}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right column — results */}
+      <div className="bg-gray-900 rounded-2xl p-6 text-white">
+        {/* Hero total */}
+        <div>
+          <div className="text-5xl font-bold text-white">
+            {totalAnnual.toLocaleString("en-US", {
+              style: "currency",
+              currency: "USD",
+              maximumFractionDigits: 0,
+            })}
+          </div>
+          <div className="text-indigo-400 mt-1 text-sm">estimated / year</div>
+        </div>
+
+        <p className="text-gray-400 text-sm mt-4 mb-3">
+          See where your revenue is coming from:
+        </p>
+
+        {/* Revenue breakdown */}
+        <div className="divide-y divide-gray-700">
+          <div className="flex justify-between items-center py-3 border-b border-gray-700">
+            <span className="text-gray-400 text-sm">New subscribers</span>
+            <span className="text-white font-semibold">
+              ${Math.round(newSubRevenue).toLocaleString()}
+            </span>
+          </div>
+          <div className="flex justify-between items-center py-3 border-b border-gray-700">
+            <span className="text-gray-400 text-sm">Email campaigns</span>
+            <span className="text-white font-semibold">
+              ${Math.round(campaignRevenue).toLocaleString()}
+            </span>
+          </div>
+          <div className="flex justify-between items-center py-3 border-b border-gray-700">
+            <span className="text-gray-400 text-sm">Automated flows</span>
+            <span className="text-white font-semibold">
+              ${Math.round(flowRevenue).toLocaleString()}
+            </span>
+          </div>
+          {channel === "email_sms" && (
+            <div className="flex justify-between items-center py-3 border-b border-gray-700">
+              <span className="text-gray-400 text-sm">SMS campaigns</span>
+              <span className="text-white font-semibold">
+                ${Math.round(smsRevenue).toLocaleString()}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Footnote */}
+        <p className="text-gray-500 text-xs mt-4">
+          Estimates based on industry averages: 22% email open rate, 2.5% CTR.
+          Actual results vary. All calculations run in your browser.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main export ───────────────────────────── */
 export function EmailTabs(props: Props) {
   const [tab, setTab] = useState<TabId>("flows");
@@ -391,6 +582,9 @@ export function EmailTabs(props: Props) {
           )}
         </div>
       )}
+
+      {/* ── ROI CALCULATOR ── */}
+      {tab === "roi" && <EmailROICalculator />}
 
       {/* ── DELIVERABILITY ── */}
       {tab === "deliverability" && (

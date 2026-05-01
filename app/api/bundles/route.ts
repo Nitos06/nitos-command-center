@@ -1,18 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient as createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: cors });
+}
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const brandId = req.nextUrl.searchParams.get("brandId");
-  if (!brandId) return NextResponse.json({ error: "brandId required" }, { status: 400 });
-  const { data } = await supabase.from("bundles").select("*, bundle_items(*)").eq("brand_id", brandId).order("created_at", { ascending: false });
-  return NextResponse.json({ bundles: data ?? [] });
+  const brand_id = req.nextUrl.searchParams.get("brand_id") ?? req.nextUrl.searchParams.get("brandId") ?? "";
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const query = supabase
+    .from("bundles")
+    .select("*, bundle_items(*)");
+
+  const { data: bundles } = brand_id ? await query.eq("brand_id", brand_id) : await query;
+
+  return NextResponse.json({ bundles: bundles ?? [] }, { headers: cors });
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -61,7 +78,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { bundleId, ...updates } = await req.json();
@@ -71,7 +88,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { bundleId } = await req.json();

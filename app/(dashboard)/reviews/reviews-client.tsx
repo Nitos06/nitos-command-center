@@ -101,6 +101,36 @@ function ReviewsTab({ reviews, pending, brandId }: { reviews: any[]; pending: an
 
   return (
     <div className="space-y-4">
+      {/* How Reviews & UGC works */}
+      <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 border border-indigo-100 rounded-2xl p-5 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-lg">⭐</span>
+          <div>
+            <div className="text-sm font-semibold text-gray-800">How Reviews &amp; UGC works</div>
+            <div className="text-xs text-gray-500">Configure in app → connect to design → live on store</div>
+          </div>
+          <span className="ml-auto text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">Full pipeline</span>
+        </div>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-white rounded-xl p-3 border border-gray-100">
+            <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-1">① Configure</div>
+            <div className="text-xs text-gray-700">No setup needed — review requests send automatically after every fulfilled Shopify order. Optionally customize the email template in the settings. Set minimum star rating for auto-publish.</div>
+          </div>
+          <div className="bg-white rounded-xl p-3 border border-gray-100">
+            <div className="text-[10px] font-bold text-purple-500 uppercase tracking-wider mb-1">② Connect</div>
+            <div className="text-xs text-gray-700">The review widget embeds on your product pages via a script tag (in Integrations). Review request emails are sent via Amazon SES — make sure your SES domain is verified in Settings.</div>
+          </div>
+          <div className="bg-white rounded-xl p-3 border border-gray-100">
+            <div className="text-[10px] font-bold text-green-500 uppercase tracking-wider mb-1">③ Live</div>
+            <div className="text-xs text-gray-700">Customer gets review email 3 days after delivery → clicks link → submits stars + text + optional photo/video. 5-star reviews with media are automatically flagged as UGC assets and queued for Meta lookalike export (see UGC tab). All reviews appear in this dashboard.</div>
+          </div>
+        </div>
+        <div className="bg-white/80 rounded-xl p-3 border border-gray-100">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">🤖 What the agent does automatically</div>
+          <div className="text-xs text-gray-600">Sends review request emails via SES after order fulfillment. Scores UGC quality (image clarity, product visibility, authenticity). Exports top UGC to Meta Custom Audiences for lookalike targeting. Replies to negative reviews with CS-tone responses for approval.</div>
+        </div>
+      </div>
+
       {/* Stats bar */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
@@ -622,8 +652,15 @@ function UGCTab({ ugcAssets, brandId }: { ugcAssets: any[]; brandId: string }) {
 
   async function exportToMeta() {
     setExporting(true);
-    await fetch("/api/ugc/export-meta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: [...selected], brandId }) });
-    setExporting(false); setSelected(new Set());
+    try {
+      const res = await fetch("/api/ugc/export-meta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: [...selected], brandId }) });
+      const data = await res.json();
+      alert(data.message || (data.ok ? "Exported successfully!" : "Export failed"));
+    } catch {
+      alert("Export failed — check console");
+    }
+    setExporting(false);
+    setSelected(new Set());
   }
 
   return (

@@ -17,7 +17,7 @@ interface Props {
   conversions: any[];
 }
 
-const TABS = ["Funnels", "Analytics", "Settings", "Landing Page", "Extension"] as const;
+const TABS = ["Funnels", "Analytics", "Settings", "Landing Page", "Extension", "ROI Calculator"] as const;
 type Tab = typeof TABS[number];
 
 type StepType = "upsell" | "downsell" | "cross-sell";
@@ -345,6 +345,36 @@ function FunnelsTab({ brandId, funnels: initialFunnels, conversions }: { brandId
 
   return (
     <div className="space-y-4">
+      {/* How Post-Purchase Upsells works */}
+      <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 border border-indigo-100 rounded-2xl p-5 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-lg">⚡</span>
+          <div>
+            <div className="text-sm font-semibold text-gray-800">How Post-Purchase Upsells works</div>
+            <div className="text-xs text-gray-500">Configure in app → connect to design → live on store</div>
+          </div>
+          <span className="ml-auto text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">Full pipeline</span>
+        </div>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-white rounded-xl p-3 border border-gray-100">
+            <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-1">① Configure</div>
+            <div className="text-xs text-gray-700">Create a funnel here. Add steps — each step is one upsell offer (product, headline, price, image). You can chain multiple offers: if they accept step 1, show step 2. If they decline, show a different offer or end.</div>
+          </div>
+          <div className="bg-white rounded-xl p-3 border border-gray-100">
+            <div className="text-[10px] font-bold text-purple-500 uppercase tracking-wider mb-1">② Connect</div>
+            <div className="text-xs text-gray-700">The upsell shows natively on Shopify&apos;s Thank You page via a checkout extension. No embed code needed — it hooks directly into Shopify&apos;s post-purchase flow. Enable it in the Extension tab.</div>
+          </div>
+          <div className="bg-white rounded-xl p-3 border border-gray-100">
+            <div className="text-[10px] font-bold text-green-500 uppercase tracking-wider mb-1">③ Live</div>
+            <div className="text-xs text-gray-700">Order completes → customer lands on Thank You page → upsell offer appears with one-click accept (no re-entering payment info). Accept creates an additional Shopify order automatically. All tracked in the Analytics tab.</div>
+          </div>
+        </div>
+        <div className="bg-white/80 rounded-xl p-3 border border-gray-100">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">🤖 What the agent does automatically</div>
+          <div className="text-xs text-gray-600">Tests different upsell products against each other (A/B), monitors acceptance rates by product category, pauses offers below 2% acceptance, and suggests price points based on original order value (best upsell = 30-50% of original AOV).</div>
+        </div>
+      </div>
+
       {showModal && (
         <NewFunnelModal
           brandId={brandId}
@@ -1179,6 +1209,135 @@ function ExtensionTab({ brandId }: { brandId: string }) {
   );
 }
 
+/* ─── ROI Calculator Tab ────────────────────────── */
+function PPROICalculator() {
+  const [monthlyOrders, setMonthlyOrders] = useState(500);
+  const [offerPrice, setOfferPrice] = useState(29);
+  const [grossMargin, setGrossMargin] = useState(55);
+  const [acceptanceRate, setAcceptanceRate] = useState(3);
+
+  const acceptedOffers = Math.round(monthlyOrders * (acceptanceRate / 100));
+  const extraRevenue = acceptedOffers * offerPrice;
+  const grossProfit = extraRevenue * (grossMargin / 100);
+  const annualProfit = grossProfit * 12;
+
+  const inputClass =
+    "w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500";
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Left column — inputs */}
+      <div className="bg-gray-900 rounded-2xl p-6 text-white">
+        <p className="text-gray-400 text-xs uppercase tracking-wider mb-4">Your Store Numbers</p>
+
+        <div className="space-y-5">
+          <div>
+            <label className="block text-sm text-gray-300 mb-1.5">Monthly Orders</label>
+            <input
+              type="number"
+              value={monthlyOrders}
+              onChange={e => setMonthlyOrders(Number(e.target.value))}
+              className={inputClass}
+              min={0}
+            />
+            <p className="text-xs text-gray-500 mt-1">Average number of orders per month</p>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-1.5">Upsell Offer Price ($)</label>
+            <input
+              type="number"
+              value={offerPrice}
+              onChange={e => setOfferPrice(Number(e.target.value))}
+              className={inputClass}
+              min={0}
+            />
+            <p className="text-xs text-gray-500 mt-1">Price of your post-purchase upsell offer</p>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-1.5">Gross Margin (%)</label>
+            <input
+              type="number"
+              value={grossMargin}
+              onChange={e => setGrossMargin(Number(e.target.value))}
+              className={inputClass}
+              min={0}
+              max={100}
+            />
+            <p className="text-xs text-gray-500 mt-1">Your product&apos;s gross margin percentage</p>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-1.5">Expected Acceptance Rate (%)</label>
+            <input
+              type="number"
+              value={acceptanceRate}
+              onChange={e => setAcceptanceRate(Number(e.target.value))}
+              className={inputClass}
+              min={0}
+              max={100}
+            />
+            <p className="text-xs text-gray-500 mt-1">% of buyers who accept the upsell</p>
+            <p className="text-xs text-indigo-400 mt-0.5">Industry average: 2–5%</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right column — results */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 flex flex-col">
+        {/* Hero number */}
+        <div className="mb-4">
+          <div className="flex items-end gap-2">
+            <span className="text-5xl font-bold text-green-600">
+              ${annualProfit.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+            </span>
+            <span className="text-lg text-gray-500 mb-1">/year</span>
+          </div>
+          <p className="text-sm text-gray-500 mt-1">Extra revenue from post-purchase upsells</p>
+        </div>
+
+        <hr className="border-gray-100 mb-4" />
+
+        {/* Breakdown */}
+        <div className="flex-1">
+          <div className="flex justify-between py-3 border-b border-gray-100">
+            <span className="text-sm text-gray-500">Upsell accepts / month</span>
+            <span className="text-sm font-semibold text-gray-900">{acceptedOffers.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-3 border-b border-gray-100">
+            <span className="text-sm text-gray-500">Extra monthly revenue</span>
+            <span className="text-sm font-semibold text-green-600">${extraRevenue.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-3 border-b border-gray-100">
+            <span className="text-sm text-gray-500">Monthly gross profit</span>
+            <span className="text-sm font-semibold text-green-600">
+              ${grossProfit.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+            </span>
+          </div>
+        </div>
+
+        {/* Dark callout */}
+        {annualProfit > 0 && (
+          <div className="bg-gray-900 rounded-xl p-4 mt-4">
+            <p className="text-white font-bold text-base">
+              ${annualProfit.toLocaleString("en-US", { maximumFractionDigits: 0 })} extra profit/year
+            </p>
+            <p className="text-gray-400 text-xs mt-1">
+              This is based on your store&apos;s numbers and industry-standard upsell acceptance rates. Test one offer first.
+            </p>
+          </div>
+        )}
+
+        {/* Footnote */}
+        <p className="text-[11px] text-gray-400 mt-4">
+          Calculation runs in your browser and is not stored. Based on gross margin, not net.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Root Component ────────────────────────────── */
 export default function PPClient({ brandId, funnels, conversions }: Props) {
   const [tab, setTab] = useState<Tab>("Funnels");
@@ -1202,6 +1361,7 @@ export default function PPClient({ brandId, funnels, conversions }: Props) {
       {tab === "Settings" && <PPSettingsTab />}
       {tab === "Landing Page" && <PPLandingPageEditor brandId={brandId} funnels={funnels} />}
       {tab === "Extension" && <ExtensionTab brandId={brandId} />}
+      {tab === "ROI Calculator" && <PPROICalculator />}
     </div>
   );
 }

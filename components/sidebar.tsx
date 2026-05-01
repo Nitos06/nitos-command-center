@@ -45,19 +45,6 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    label: "Store",
-    items: [
-      { href: "/reviews",       label: "Reviews",        icon: Star         },
-      { href: "/post-purchase", label: "Post-Purchase",   icon: Zap          },
-      { href: "/quiz",          label: "Quiz",            icon: HelpCircle   },
-      { href: "/affiliates",    label: "Affiliates",      icon: Users        },
-      { href: "/bulk-editor",   label: "Bulk Editor",     icon: PenLine      },
-      { href: "/bundles",       label: "Bundles",         icon: Package      },
-      { href: "/gift",          label: "Gift",            icon: Gift         },
-      { href: "/suppliers",     label: "Suppliers",       icon: Truck        },
-    ],
-  },
-  {
     label: "Engage",
     items: [
       { href: "/ads",               label: "Ads",              icon: Megaphone      },
@@ -65,15 +52,28 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/customer-service",  label: "Customer Service", icon: HeadphonesIcon },
       { href: "/socials",           label: "Socials",          icon: Share2         },
       { href: "/seo",               label: "SEO",              icon: Search         },
+      { href: "/taxes",             label: "Taxes",            icon: Receipt        },
     ],
   },
   {
-    label: "Analyze",
+    label: "Apps",
     items: [
-      { href: "/taxes",        label: "Taxes (IL)",   icon: Receipt           },
-      { href: "/ecom-builder", label: "Ecom Builder", icon: Hammer            },
-      { href: "/agents",       label: "Agents",       icon: Bot               },
-      { href: "/setup",        label: "Setup & Docs", icon: BookOpen          },
+      { href: "/reviews",       label: "Reviews",       icon: Star       },
+      { href: "/post-purchase", label: "Post-Purchase", icon: Zap        },
+      { href: "/quiz",          label: "Quiz",          icon: HelpCircle },
+      { href: "/affiliates",    label: "Affiliates",    icon: Users      },
+      { href: "/bundles",       label: "Bundles",       icon: Package    },
+      { href: "/gift",          label: "Gift",          icon: Gift       },
+      { href: "/bulk-editor",   label: "Bulk Editor",   icon: PenLine    },
+      { href: "/suppliers",     label: "Suppliers",     icon: Truck      },
+    ],
+  },
+  {
+    label: "Build",
+    items: [
+      { href: "/ecom-builder", label: "Ecom Builder", icon: Hammer   },
+      { href: "/agents",       label: "Agents",       icon: Bot      },
+      { href: "/setup",        label: "Setup & Docs", icon: BookOpen },
     ],
   },
 ];
