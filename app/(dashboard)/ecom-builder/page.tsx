@@ -91,48 +91,41 @@ Also add 10 ideas for products that don't seem to appear online but you have an 
 *After user reviews and approves — move to Step 2`,
       },
       {
-        label: "Step 2 — Source on 1688 / Alibaba / CJDropshipping",
+        label: "Step 2 — Source & Evaluate",
         content: `Based on the 10 product directions from Step 1, go and find real products on:
 
 • 1688.com → focus on cost + supplier quality
 • Alibaba.com → focus on bulk pricing + customization options
 • CJDropshipping.com → focus on ready-to-test products + faster shipping
 
-For each platform, find the best matching products and note: supplier rating, MOQ, estimated cost, shipping time, and customization options.
+For each product found, document: supplier rating, MOQ, estimated cost, shipping time, and customization options.
 
-*Compile your findings and send them to the coworker (Step 3) for evaluation`,
-      },
-      {
-        label: "Step 3 — Coworker Evaluation",
-        content: `Send your sourcing findings to coworker with this prompt:
+💰 Pricing Check:
+Compare price to competition — after 3× the product cost, we aim for at least 15%–20% less selling price than competitors.
+Example: product costs $8 → sell at $24+ → check that this lands 15–20% below comp prices.
+
+─────────────────────────────────────────
+Then send your sourcing findings to coworker with this prompt:
 
 "Again, follow the table of rules of finding a winning product below and tell me what you think of my findings. Rate each product from 1 to 10."
 
-🔎 Winning Product Criteria (Ecom Sourcing)
+🔎 Winning Product Criteria (14 Rules)
 
-#  | Rule                        | What to Look For                                              | Why It Matters
-1  | Solves a real problem        | Clear pain (e.g. saves time, reduces stress, fixes inconvenience) | Problem-driven products sell easier than "nice to have"
-2  | Strong "wow" factor          | Visually impressive or instantly understandable benefit       | Helps with ads (especially TikTok/UGC)
-3  | Price vs cost margin         | At least 3x markup (e.g. $8 cost → $24+ sell)                | Leaves room for ads + profit
-4  | Not saturated (yet)          | Some competitors exist, but not everywhere                    | You want validation, not overcrowding
-5  | Easy to ship                 | Lightweight, small, not fragile                               | Reduces refunds + shipping headaches
-6  | No brand dominance           | Not controlled by big brands                                  | Hard to compete if customers trust existing brands
-7  | Emotion-driven               | Triggers fear, frustration, vanity, convenience               | Emotional buying = higher conversion
-8  | Repeat potential or upsells  | Can bundle or sell variations                                 | Increases AOV (average order value)
-9  | Great ad potential           | Can create great ads and a lot of media                       | Content is the fuel for paid growth
-10 | Clear target audience        | Easy to say "this is for X people"                            | Makes marketing much easier
-11 | Customization potential      | Branding, packaging, variations                               | Helps you stand out from competitors
-12 | Not easily found locally     | Hard to buy in nearby stores                                  | Reduces price comparison
-13 | Longevity balance            | Not just a 2-week trend                                       | More stable business
-14 | Low return risk              | Simple usage, low defect chance                               | Protects your margins
-
-─────────────────────────────────────────
-How to actually use this (important):
-
-When you're browsing:
-• On 1688 → focus on cost + supplier quality
-• On Alibaba → focus on bulk pricing + customization
-• On CJdropshipping → focus on ready-to-test products + faster shipping`,
+#  | Rule                        | What to Look For                                                   | Why It Matters
+1  | Solves a real problem        | Clear pain (e.g. saves time, reduces stress, fixes inconvenience)  | Problem-driven products sell easier than "nice to have"
+2  | Strong "wow" factor          | Visually impressive or instantly understandable benefit            | Helps with ads (especially TikTok/UGC)
+3  | Price vs cost margin         | At least 3× markup (e.g. $8 cost → $24+ sell)                     | Leaves room for ads + profit
+4  | Not saturated (yet)          | Some competitors exist, but not everywhere                         | You want validation, not overcrowding
+5  | Easy to ship                 | Lightweight, small, not fragile                                    | Reduces refunds + shipping headaches
+6  | No brand dominance           | Not controlled by big brands                                       | Hard to compete if customers trust existing brands
+7  | Emotion-driven               | Triggers fear, frustration, vanity, convenience                    | Emotional buying = higher conversion
+8  | Repeat potential or upsells  | Can bundle or sell variations                                      | Increases AOV (average order value)
+9  | Great ad potential           | Can create great ads and a lot of media                            | Content is the fuel for paid growth
+10 | Clear target audience        | Easy to say "this is for X people"                                 | Makes marketing much easier
+11 | Customization potential      | Branding, packaging, variations                                    | Helps you stand out from competitors
+12 | Not easily found locally     | Hard to buy in nearby stores                                       | Reduces price comparison
+13 | Longevity balance            | Not just a 2-week trend                                            | More stable business
+14 | Low return risk              | Simple usage, low defect chance                                    | Protects your margins`,
       },
     ],
   },
