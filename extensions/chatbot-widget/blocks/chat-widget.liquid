@@ -1,0 +1,486 @@
+{% comment %}
+  Nitos AI Chat Widget — Theme App Extension Block
+  Merchants add this block from Online Store → Themes → Customize → Add section/block → Apps → AI Chat Widget
+  No script snippets. Fully native Shopify theme extension.
+{% endcomment %}
+
+{% assign brand_id = block.settings.brand_id %}
+{% assign bot_name = block.settings.bot_name | default: "Support" %}
+{% assign accent_color = block.settings.accent_color | default: "#6366f1" %}
+{% assign greeting = block.settings.greeting | default: "Hi! How can I help you today?" %}
+{% assign position = block.settings.position | default: "right" %}
+{% assign api_url = block.settings.api_url | default: "https://nitaiecompro-nine.vercel.app" %}
+
+<div
+  id="nitos-chat-root"
+  data-brand="{{ brand_id | escape }}"
+  data-name="{{ bot_name | escape }}"
+  data-color="{{ accent_color | escape }}"
+  data-greeting="{{ greeting | escape }}"
+  data-position="{{ position }}"
+  data-api="{{ api_url | escape }}"
+  {{ block.shopify_attributes }}
+></div>
+
+<style>
+  #nc-bubble {
+    position: fixed;
+    bottom: 24px;
+    {{ position }}: 24px;
+    z-index: 2147483647;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: {{ accent_color }};
+    box-shadow: 0 4px 20px rgba(0,0,0,0.22);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    outline: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  #nc-bubble:hover { transform: scale(1.07); box-shadow: 0 6px 28px rgba(0,0,0,0.28); }
+  #nc-bubble svg { width: 24px; height: 24px; }
+
+  #nc-window {
+    position: fixed;
+    bottom: 90px;
+    {{ position }}: 24px;
+    z-index: 2147483647;
+    width: 350px;
+    max-width: calc(100vw - 32px);
+    height: 500px;
+    max-height: calc(100svh - 110px);
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.16);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    transition: opacity 0.22s, transform 0.22s;
+  }
+  #nc-window.nc-closed {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+    pointer-events: none;
+  }
+
+  #nc-header {
+    background: {{ accent_color }};
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .nc-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .nc-avatar svg { width: 16px; height: 16px; }
+  .nc-header-text { flex: 1; }
+  .nc-header-name { color: #fff; font-weight: 700; font-size: 14px; line-height: 1.2; }
+  .nc-header-status { color: rgba(255,255,255,0.75); font-size: 11px; }
+  .nc-close-btn {
+    background: none; border: none; color: rgba(255,255,255,0.8);
+    cursor: pointer; font-size: 22px; line-height: 1; padding: 0 2px;
+    transition: color 0.15s;
+  }
+  .nc-close-btn:hover { color: #fff; }
+
+  #nc-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 14px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    background: #f7f8fc;
+    scroll-behavior: smooth;
+  }
+  #nc-messages::-webkit-scrollbar { width: 4px; }
+  #nc-messages::-webkit-scrollbar-thumb { background: #ddd; border-radius: 4px; }
+
+  .nc-msg-row { display: flex; gap: 8px; align-items: flex-end; }
+  .nc-msg-row.nc-user-row { justify-content: flex-end; }
+  .nc-bot-icon {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: {{ accent_color }};
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .nc-bot-icon svg { width: 13px; height: 13px; }
+
+  .nc-msg {
+    max-width: 78%;
+    padding: 9px 13px;
+    border-radius: 16px;
+    line-height: 1.48;
+    word-wrap: break-word;
+    font-size: 13.5px;
+  }
+  .nc-bot-msg {
+    background: #fff;
+    color: #1a1a2e;
+    border: 1px solid #e8e8f2;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .nc-user-msg {
+    background: {{ accent_color }};
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .nc-time {
+    font-size: 10px;
+    color: #bbb;
+    margin-top: 2px;
+    text-align: right;
+  }
+
+  .nc-typing-row { display: flex; gap: 8px; align-items: flex-end; }
+  .nc-typing {
+    background: #fff;
+    border: 1px solid #e8e8f2;
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    padding: 10px 14px;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .nc-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #c0c0cc;
+    animation: nc-bounce 1.3s infinite ease-in-out;
+  }
+  .nc-dot:nth-child(2) { animation-delay: 0.18s; }
+  .nc-dot:nth-child(3) { animation-delay: 0.36s; }
+  @keyframes nc-bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+
+  #nc-input-row {
+    padding: 10px 12px;
+    border-top: 1px solid #eeeef4;
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    flex-shrink: 0;
+    background: #fff;
+  }
+  #nc-input {
+    flex: 1;
+    border: 1.5px solid #e0e0ee;
+    border-radius: 12px;
+    padding: 9px 13px;
+    font-size: 13.5px;
+    font-family: inherit;
+    color: #1a1a2e;
+    resize: none;
+    outline: none;
+    max-height: 90px;
+    line-height: 1.45;
+    transition: border-color 0.15s;
+  }
+  #nc-input:focus { border-color: {{ accent_color }}; }
+  #nc-input::placeholder { color: #b0b0c0; }
+  #nc-send {
+    background: {{ accent_color }};
+    border: none;
+    border-radius: 12px;
+    width: 38px;
+    height: 38px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  #nc-send:hover:not(:disabled) { opacity: 0.88; transform: scale(1.05); }
+  #nc-send:disabled { opacity: 0.45; cursor: not-allowed; }
+  #nc-send svg { width: 16px; height: 16px; }
+
+  #nc-powered {
+    text-align: center;
+    font-size: 10px;
+    color: #c8c8d8;
+    padding: 4px 0 8px;
+    background: #fff;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 480px) {
+    #nc-window {
+      bottom: 0;
+      {{ position }}: 0;
+      width: 100vw;
+      max-width: 100vw;
+      height: 100svh;
+      max-height: 100svh;
+      border-radius: 0;
+    }
+    #nc-bubble { bottom: 16px; {{ position }}: 16px; }
+  }
+</style>
+
+<script>
+(function() {
+  var root     = document.getElementById('nitos-chat-root');
+  var brandId  = root.dataset.brand   || '';
+  var botName  = root.dataset.name    || 'Support';
+  var color    = root.dataset.color   || '#6366f1';
+  var greeting = root.dataset.greeting;
+  var apiBase  = root.dataset.api     || '';
+  var position = root.dataset.position || 'right';
+
+  var SESSION_KEY = 'nc_sid_' + brandId;
+  var sessionId   = null;
+  var isOpen      = false;
+
+  /* ── Build DOM ─────────────────────────────────────────────────── */
+  var CHAT_ICON = '<svg viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>';
+  var CLOSE_ICON= '<svg viewBox="0 0 24 24" fill="white"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+  var SEND_ICON = '<svg viewBox="0 0 24 24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
+  var BOT_ICON  = '<svg viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>';
+
+  /* Bubble */
+  var bubble = document.createElement('button');
+  bubble.id = 'nc-bubble';
+  bubble.setAttribute('aria-label', 'Open chat');
+  bubble.innerHTML = CHAT_ICON;
+
+  /* Window */
+  var win = document.createElement('div');
+  win.id = 'nc-window';
+  win.className = 'nc-closed';
+  win.setAttribute('role', 'dialog');
+  win.setAttribute('aria-label', botName + ' chat');
+  win.innerHTML = [
+    '<div id="nc-header">',
+    '  <div class="nc-avatar">' + BOT_ICON + '</div>',
+    '  <div class="nc-header-text">',
+    '    <div class="nc-header-name">' + escHtml(botName) + '</div>',
+    '    <div class="nc-header-status">&#9679; Online — answers in seconds</div>',
+    '  </div>',
+    '  <button class="nc-close-btn" id="nc-close-btn" aria-label="Close chat">&times;</button>',
+    '</div>',
+    '<div id="nc-messages" aria-live="polite"></div>',
+    '<div id="nc-input-row">',
+    '  <textarea id="nc-input" rows="1" placeholder="Ask a question…" aria-label="Message"></textarea>',
+    '  <button id="nc-send" disabled aria-label="Send">' + SEND_ICON + '</button>',
+    '</div>',
+    '<div id="nc-powered">Powered by Nitos AI</div>',
+  ].join('');
+
+  document.body.appendChild(bubble);
+  document.body.appendChild(win);
+
+  var msgBox   = document.getElementById('nc-messages');
+  var input    = document.getElementById('nc-input');
+  var sendBtn  = document.getElementById('nc-send');
+  var closeBtn = document.getElementById('nc-close-btn');
+
+  /* ── Helpers ────────────────────────────────────────────────────── */
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function now() {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function addBotMsg(text) {
+    var row = document.createElement('div');
+    row.className = 'nc-msg-row';
+    row.innerHTML = [
+      '<div class="nc-bot-icon">' + BOT_ICON + '</div>',
+      '<div>',
+      '  <div class="nc-msg nc-bot-msg">' + escHtml(text) + '</div>',
+      '  <div class="nc-time">' + now() + '</div>',
+      '</div>',
+    ].join('');
+    msgBox.appendChild(row);
+    msgBox.scrollTop = msgBox.scrollHeight;
+    return row;
+  }
+
+  function addUserMsg(text) {
+    var row = document.createElement('div');
+    row.className = 'nc-msg-row nc-user-row';
+    row.innerHTML = [
+      '<div>',
+      '  <div class="nc-msg nc-user-msg">' + escHtml(text) + '</div>',
+      '  <div class="nc-time">' + now() + '</div>',
+      '</div>',
+    ].join('');
+    msgBox.appendChild(row);
+    msgBox.scrollTop = msgBox.scrollHeight;
+  }
+
+  function showTyping() {
+    var row = document.createElement('div');
+    row.className = 'nc-typing-row';
+    row.id = 'nc-typing';
+    row.innerHTML = [
+      '<div class="nc-bot-icon">' + BOT_ICON + '</div>',
+      '<div class="nc-typing">',
+      '  <div class="nc-dot"></div>',
+      '  <div class="nc-dot"></div>',
+      '  <div class="nc-dot"></div>',
+      '</div>',
+    ].join('');
+    msgBox.appendChild(row);
+    msgBox.scrollTop = msgBox.scrollHeight;
+    return row;
+  }
+
+  function removeTyping() {
+    var el = document.getElementById('nc-typing');
+    if (el) el.remove();
+  }
+
+  /* ── Toggle open/close ─────────────────────────────────────────── */
+  function openChat() {
+    isOpen = true;
+    win.classList.remove('nc-closed');
+    bubble.innerHTML = CLOSE_ICON;
+    bubble.setAttribute('aria-label', 'Close chat');
+    if (msgBox.children.length === 0) {
+      addBotMsg(greeting);
+    }
+    setTimeout(function() { input.focus(); }, 250);
+  }
+
+  function closeChat() {
+    isOpen = false;
+    win.classList.add('nc-closed');
+    bubble.innerHTML = CHAT_ICON;
+    bubble.setAttribute('aria-label', 'Open chat');
+  }
+
+  bubble.addEventListener('click', function() { isOpen ? closeChat() : openChat(); });
+  closeBtn.addEventListener('click', closeChat);
+
+  /* ── Send message ──────────────────────────────────────────────── */
+  async function sendMessage() {
+    var text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+    sendBtn.disabled = true;
+    addUserMsg(text);
+
+    var typing = showTyping();
+
+    try {
+      var res = await fetch(apiBase + '/api/cs/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, sessionId: sessionId, brandId: brandId }),
+      });
+
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+
+      var data = await res.json();
+      typing.remove();
+
+      if (data.sessionId) {
+        sessionId = data.sessionId;
+        try { sessionStorage.setItem(SESSION_KEY, sessionId); } catch(e) {}
+      }
+
+      addBotMsg(data.reply || 'Sorry, something went wrong. Please try again.');
+    } catch (err) {
+      typing.remove();
+      addBotMsg('Connection issue — please try again in a moment.');
+    } finally {
+      sendBtn.disabled = !input.value.trim();
+      input.focus();
+    }
+  }
+
+  sendBtn.addEventListener('click', sendMessage);
+
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!sendBtn.disabled) sendMessage();
+    }
+  });
+
+  input.addEventListener('input', function() {
+    sendBtn.disabled = !this.value.trim();
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 88) + 'px';
+  });
+
+  /* ── Restore session ───────────────────────────────────────────── */
+  try {
+    var saved = sessionStorage.getItem(SESSION_KEY);
+    if (saved) sessionId = saved;
+  } catch(e) {}
+
+})();
+</script>
+
+{% schema %}
+{
+  "name": "AI Chat Widget",
+  "target": "body",
+  "javascript": null,
+  "stylesheet": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "brand_id",
+      "label": "Brand ID",
+      "info": "Your Nitos brand ID from the dashboard → Settings"
+    },
+    {
+      "type": "text",
+      "id": "bot_name",
+      "label": "Bot name",
+      "default": "Support"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#6366f1"
+    },
+    {
+      "type": "text",
+      "id": "greeting",
+      "label": "Greeting message",
+      "default": "Hi! How can I help you today?"
+    },
+    {
+      "type": "select",
+      "id": "position",
+      "label": "Position",
+      "default": "right",
+      "options": [
+        { "value": "right", "label": "Bottom right" },
+        { "value": "left",  "label": "Bottom left" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "api_url",
+      "label": "API URL",
+      "default": "https://nitaiecompro-nine.vercel.app",
+      "info": "Leave as default unless you have a custom domain"
+    }
+  ]
+}
+{% endschema %}

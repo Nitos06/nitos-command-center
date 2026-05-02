@@ -25,3 +25,8 @@ embedded = false
 type = "ui_extension"
 name = "post-purchase-upsell"
 handle = "post-purchase-upsell"
+
+[[extensions]]
+type = "theme"
+name = "AI Chat Widget"
+handle = "chatbot-widget"
