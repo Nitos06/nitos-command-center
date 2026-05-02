@@ -10,6 +10,39 @@ import { ChevronDown } from "lucide-react";
 
 const SECTIONS = [
   {
+    number: "0.",
+    title: "Addons:",
+    intro: "",
+    steps: [
+      {
+        label: "Step 1 — Domain (Hostinger)",
+        content: `Connect to Hostinger, add a domain for the brand and configure it:
+
+• Go to hostinger.com → buy a domain that matches your brand name
+• Connect the domain to your Shopify store: Shopify Admin → Settings → Domains → Connect existing domain
+• Point the DNS records (A record + CNAME) to Shopify's servers as instructed
+• Set the new domain as your primary domain`,
+      },
+      {
+        label: "Step 2 — UK Company (Icon Offices)",
+        content: `Connect to Icon Offices to create a UK company:
+
+• Go to iconoffices.co.uk and register a UK Ltd company
+• Use the registered address service they provide (virtual office)
+• Once registered, use the company details for your Shopify store, payment processors, and ad accounts`,
+      },
+      {
+        label: "Step 3 — Wise Business Account",
+        content: `Create a Wise business account to receive and manage international payments:
+
+• Go to wise.com/business and create a business account under your UK company
+• Get a UK bank account number + sort code (free with Wise)
+• Connect Wise to your Shopify Payments or payment processor
+• Use Wise to pay suppliers (1688, Alibaba, CJ) and receive revenue in multiple currencies`,
+      },
+    ],
+  },
+  {
     number: "1.",
     title: "Competitor research:",
     intro: `When we want to do competitor research we will use the output of section "1" to make this section work, we will use claude coworker or claude code with playwright mcps (which is better?)
