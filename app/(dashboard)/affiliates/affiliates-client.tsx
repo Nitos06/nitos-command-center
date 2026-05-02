@@ -1814,7 +1814,7 @@ function AffiliateROICalculator() {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const TABS = ["Programs", "Affiliates", "Referrals", "Payments", "Motivation", "Reach Out", "Analytics", "ROI Calculator"] as const;
+const TABS = ["Programs", "Affiliates", "Referrals", "Payments", "Motivation", "Reach Out", "Analytics", "ROI Calculator", "Display"] as const;
 type Tab = typeof TABS[number];
 
 export default function AffiliatesClient({
@@ -1860,6 +1860,7 @@ export default function AffiliatesClient({
         {activeTab === "Reach Out" && <ReachOutTab />}
         {activeTab === "Analytics" && <AnalyticsTab clicks={clicks} conversions={conversions} />}
         {activeTab === "ROI Calculator" && <AffiliateROICalculator />}
+        {activeTab === "Display" && <DisplayTab />}
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ const WIDGET_SCRIPTS: Record<string, string> = {
   quiz: "quiz.js",
   chat: "chat.js",
   affiliates: "affiliates.js",
+  gift: "gift.js",
 };
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ type: string }> }) {

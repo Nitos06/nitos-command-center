@@ -159,7 +159,7 @@ function DesignConfigureTab({ brandId, quizzes }: { brandId: string; quizzes: an
       {/* ── LIVE PREVIEW ── */}
       <div className="rounded-2xl overflow-hidden sticky top-4 shadow-2xl" style={{ background: bgColor, minHeight: 520 }}>
         <div className="grid grid-cols-[1fr_1.4fr] h-full min-h-[520px]">
-          {/* Left panel */}
+          {/* Left panel — always shows quiz identity */}
           <div className="p-8 flex flex-col justify-center" style={{ background: bgColor }}>
             <div className="text-xs font-bold tracking-widest mb-3" style={{ color: accentColor }}>
               {duration}
@@ -178,62 +178,131 @@ function DesignConfigureTab({ brandId, quizzes }: { brandId: string; quizzes: an
             </ul>
           </div>
 
-          {/* Right panel — question card */}
+          {/* Right panel — changes based on active config section */}
           <div className="p-6 flex flex-col justify-center" style={{ background: "rgba(255,255,255,0.04)" }}>
-            {/* Progress */}
-            {questions.length > 1 && (
-              <div className="flex gap-1.5 mb-5">
-                {questions.map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-1 flex-1 rounded-full cursor-pointer transition"
-                    style={{ background: i === previewQ ? accentColor : "rgba(255,255,255,0.2)" }}
-                    onClick={() => setPreviewQ(i)}
-                  />
-                ))}
-              </div>
-            )}
 
-            {currentQ && (
-              <>
-                <p className="text-white font-semibold text-base mb-4 leading-snug">
-                  {currentQ.text}
-                </p>
-                <div className="space-y-2.5">
-                  {currentQ.options.map((opt, i) => (
-                    <div
-                      key={opt.id}
-                      className="px-4 py-3 rounded-xl text-sm text-gray-200 cursor-pointer transition hover:bg-white/10"
-                      style={{ border: `1.5px solid ${optionBorder}` }}
-                    >
-                      {opt.text}
-                    </div>
-                  ))}
+            {/* ── EMAIL GATE PREVIEW ── */}
+            {section === "email" && emailGate ? (
+              <div className="flex flex-col gap-4">
+                <div className="text-center mb-2">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: accentColor + "22" }}>
+                    <Mail className="w-5 h-5" style={{ color: accentColor }} />
+                  </div>
+                  <p className="text-white font-bold text-lg leading-snug mb-1">{gateHeading}</p>
+                  <p className="text-gray-400 text-xs leading-relaxed">{gateSubtext}</p>
                 </div>
+                <div className="space-y-2.5">
+                  <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(255,255,255,0.07)", border: `1.5px solid ${optionBorder}`, color: "rgba(255,255,255,0.4)" }}>
+                    Email address *
+                  </div>
+                  {showSms && (
+                    <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(255,255,255,0.07)", border: `1.5px solid ${optionBorder}`, color: "rgba(255,255,255,0.4)" }}>
+                      Phone number (optional)
+                    </div>
+                  )}
+                  <button
+                    className="w-full py-3 rounded-xl text-sm font-bold transition"
+                    style={{ background: accentColor, color: bgColor }}
+                  >
+                    {gateHeading} →
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-500 text-center">We respect your privacy · Unsubscribe anytime</p>
+              </div>
+            ) : section === "email" && !emailGate ? (
+              <div className="text-center text-gray-400 text-sm py-8">
+                <Mail className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p>Email gate is turned off.</p>
+                <p className="text-xs mt-1 opacity-70">Results shown directly after last question.</p>
+              </div>
+
+            /* ── RESULTS PREVIEW ── */
+            ) : section === "results" ? (
+              <div className="flex flex-col gap-3">
+                <div className="text-center mb-1">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2" style={{ background: accentColor + "22" }}>
+                    <Check className="w-5 h-5" style={{ color: accentColor }} />
+                  </div>
+                  <p className="text-white font-bold text-base">Your perfect match</p>
+                  <p className="text-gray-400 text-xs mt-0.5">Based on your answers</p>
+                </div>
+                {rules.slice(0, 1).map(rule => (
+                  <div key={rule.id} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.07)", border: `1.5px solid ${optionBorder}` }}>
+                    <p className="text-white font-semibold text-sm mb-1">{rule.productTitle || "Your Product"}</p>
+                    <p className="text-gray-400 text-xs">{rule.description || "Perfect for your needs."}</p>
+                    <button className="mt-3 w-full py-2 rounded-lg text-xs font-bold" style={{ background: accentColor, color: bgColor }}>
+                      Shop Now →
+                    </button>
+                  </div>
+                ))}
+                {rules.length === 0 && (
+                  <div className="text-center text-gray-500 text-xs py-4">Add a rule to see the results preview</div>
+                )}
+              </div>
+
+            /* ── QUESTION PREVIEW (default) ── */
+            ) : (
+              <>
+                {/* Progress */}
+                {questions.length > 0 && (
+                  <div className="flex gap-1.5 mb-5">
+                    {questions.map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-1 flex-1 rounded-full cursor-pointer transition"
+                        style={{ background: i === previewQ ? accentColor : "rgba(255,255,255,0.2)" }}
+                        onClick={() => setPreviewQ(i)}
+                      />
+                    ))}
+                    {emailGate && (
+                      <div className="h-1 w-6 rounded-full" style={{ background: "rgba(255,255,255,0.1)" }} title="Email gate step" />
+                    )}
+                  </div>
+                )}
+
+                {currentQ && (
+                  <>
+                    <p className="text-white font-semibold text-base mb-4 leading-snug">
+                      {currentQ.text}
+                    </p>
+                    <div className="space-y-2.5">
+                      {currentQ.options.map((opt) => (
+                        <div
+                          key={opt.id}
+                          className="px-4 py-3 rounded-xl text-sm text-gray-200 cursor-pointer transition hover:bg-white/10"
+                          style={{ border: `1.5px solid ${optionBorder}` }}
+                        >
+                          {opt.text}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Nav */}
+                <div className="flex justify-between mt-5">
+                  <button
+                    onClick={() => setPreviewQ(p => Math.max(0, p - 1))}
+                    className="text-xs text-gray-400 hover:text-white transition"
+                    disabled={previewQ === 0}
+                  >← Back</button>
+                  <button
+                    onClick={() => setPreviewQ(p => Math.min(questions.length - 1, p + 1))}
+                    className="text-xs px-4 py-1.5 rounded-lg text-white font-semibold transition"
+                    style={{ background: accentColor, color: bgColor }}
+                  >
+                    {previewQ === questions.length - 1
+                      ? emailGate ? "Enter Email →" : "See Results →"
+                      : "Next →"}
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-gray-500 text-center mt-4">
+                  {`Question ${previewQ + 1} of ${questions.length}`}
+                  {emailGate ? " · Email required for results" : " · No email required"}
+                </p>
               </>
             )}
-
-            {/* Nav */}
-            {questions.length > 1 && (
-              <div className="flex justify-between mt-5">
-                <button
-                  onClick={() => setPreviewQ(p => Math.max(0, p - 1))}
-                  className="text-xs text-gray-400 hover:text-white transition"
-                  disabled={previewQ === 0}
-                >← Back</button>
-                <button
-                  onClick={() => setPreviewQ(p => Math.min(questions.length - 1, p + 1))}
-                  className="text-xs px-4 py-1.5 rounded-lg text-white font-semibold transition"
-                  style={{ background: accentColor, color: bgColor }}
-                >
-                  {previewQ === questions.length - 1 ? "See Results" : "Next →"}
-                </button>
-              </div>
-            )}
-
-            <p className="text-[11px] text-gray-500 text-center mt-4">
-              No email required · No sales pressure
-            </p>
           </div>
         </div>
       </div>

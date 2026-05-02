@@ -16,7 +16,7 @@ interface Props {
   quantityBreaks: any[];
 }
 
-const TABS = ["Bundles", "Analytics"] as const;
+const TABS = ["Bundles", "Volume Editor", "Analytics"] as const;
 type Tab = typeof TABS[number];
 
 type BundleType = "fixed" | "fbt" | "volume" | "bogo";
@@ -1281,6 +1281,7 @@ export default function BundlesClient({ brandId, bundles, quantityBreaks }: Prop
       </div>
 
       {tab === "Bundles" && <BundlesTab brandId={brandId} bundles={bundles} />}
+      {tab === "Volume Editor" && <VolumeBundleEditor brandId={brandId} />}
       {tab === "Analytics" && <BundleAnalyticsTab bundles={bundles} />}
     </div>
   );
