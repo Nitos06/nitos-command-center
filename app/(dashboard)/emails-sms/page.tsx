@@ -22,15 +22,17 @@ export default async function EmailsSmsPage() {
     { data: agentLogs },
     { data: brandSettings },
     { data: contacts },
+    { data: popupConfig },
   ] = await Promise.all([
     eq(supabase.from("email_flows").select("*")).order("created_at", { ascending: false }),
     eq(supabase.from("email_campaigns").select("*")).order("created_at", { ascending: false }).limit(100),
     eq(supabase.from("email_sends").select("opened,clicked,converted,revenue,bounced,delivered,spam,sent_at")).gte("sent_at", since90Iso),
-    eq(supabase.from("segments").select("*")).order("subscriber_count", { ascending: false }),
+    eq(supabase.from("segments").select("*")).order("size", { ascending: false }),
     eq(supabase.from("email_deliverability").select("*")).gte("date", since90Date).order("date", { ascending: true }),
     eq(supabase.from("agent_logs").select("*")).eq("agent_name", "email-marketing").order("created_at", { ascending: false }).limit(50),
     brandId ? supabase.from("brand_settings").select("*").eq("brand_id", brandId).maybeSingle() : Promise.resolve({ data: null }),
-    eq(supabase.from("segments").select("id,name,subscriber_count,type,created_at,last_synced_at")).order("subscriber_count", { ascending: false }),
+    eq(supabase.from("segments").select("id,name,size,type,created_at")).order("size", { ascending: false }),
+    brandId ? supabase.from("popup_configs").select("*").eq("brand_id", brandId).maybeSingle() : Promise.resolve({ data: null }),
   ]);
 
   // Aggregate stats
@@ -70,7 +72,7 @@ export default async function EmailsSmsPage() {
 
   return (
     <EmailApp
-      brandId={brandId}
+      brandId={brandId ?? ""}
       flows={flows ?? []}
       campaigns={campaigns ?? []}
       segments={segments ?? []}
@@ -78,6 +80,7 @@ export default async function EmailsSmsPage() {
       chartData={chartData}
       agentLogs={agentLogs ?? []}
       brandSettings={brandSettings}
+      popupConfig={popupConfig ?? undefined}
       stats={{
         total, delivered, opens, clicks, bounces, spam, revenue,
         openRate, ctr, bounceRate, spamRate, deliverRate,

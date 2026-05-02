@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { notify } from "@/lib/notifications";
 import crypto from "crypto";
+
+function sbService() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 function verifyShopifyHmac(body: string, hmacHeader: string, secret: string): boolean {
   const computed = crypto.createHmac("sha256", secret).update(body, "utf8").digest("base64");
@@ -40,6 +48,16 @@ export async function POST(req: NextRequest) {
   const brandId = brandSettings?.brand_id ?? null;
 
   if (topic === "orders/paid" || topic === "orders/created") {
+    // Mark any pending abandoned-cart automation as recovered (email should NOT send)
+    if (order.email) {
+      await sbService()
+        .from("automation_queue")
+        .update({ recovered: true })
+        .eq("flow_type", "abandoned_cart")
+        .eq("email", order.email)
+        .eq("sent", false);
+    }
+
     await supabase.from("shopify_orders").upsert({
       brand_id: brandId,
       shopify_order_id: String(order.id),

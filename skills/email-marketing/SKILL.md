@@ -30,7 +30,7 @@ outputs:
   - state/email-marketing/latest.json
   - state/email-marketing/latest-status.json
 references:
-  - references/my-mailjet-flows.md
+  - references/my-ses-flows.md
   - references/my-30-campaign-types.md
   - references/my-deliverability-protocol.md
   - references/my-segmentation.md
@@ -59,10 +59,27 @@ Single agent. Four jobs.
 
 ### Job A — One-time 4-flow setup (on `brand-onboarding` event)
 
-Build all 4 flows in Mailjet via MCP. Email-by-email copy from `references/my-mailjet-flows.md`. Every email follows S.C.E formula (`my-sce-formula.md`).
+Write all 4 flow definitions into the `email_flows` Supabase table as JSON `steps` arrays. Each step has `{ subject, html_template, delay_hours }`. Every email follows S.C.E formula (`my-sce-formula.md`). Full copy guidance in `references/my-ses-flows.md`.
+
+Use the Supabase MCP `execute_sql` to insert:
+```sql
+INSERT INTO email_flows (brand_id, name, trigger, is_active, steps, channel, provider)
+VALUES (
+  '<brand_id>',
+  'Welcome Flow',
+  'welcome',
+  true,
+  '[{"subject":"...","html_template":"...","delay_hours":0}, ...]'::jsonb,
+  'email',
+  'other'
+);
+```
+Do this for all 4 flows: welcome, abandoned_cart, post_purchase, win_back.
+
+**NO Mailjet. NO external API.** The `automation_queue` table + `/api/email/queue-processor` + `lib/ses.ts` is the sending layer.
 
 #### A.1 Welcome flow (8 emails / 7–14 days)
-Trigger: list subscribe.
+Trigger: `POST /api/email/capture` called from popup or quiz. Queue processor sends immediately.
 1. Discount/offer delivery (immediate)
 2. Founder story + brand mission
 3. Brand USPs — why we stand out
@@ -72,10 +89,9 @@ Trigger: list subscribe.
 7. Last-chance discount, heavy urgency
 8. Personal "everything okay?" text-only from founder
 
-#### A.2 Cart + Checkout abandon (8 emails — TWO sub-flows)
-- Cart trigger = `Added to Cart` (custom event, not Mailjet default)
-- Checkout trigger = `Checkout Started`
-- Dynamic content: line items + checkout url
+#### A.2 Cart + Checkout abandon (8 emails)
+Trigger: **real-time** — Shopify fires `checkouts/create` webhook → `/api/webhooks/shopify/checkouts` → row inserted into `automation_queue` with `trigger_at = now + 4h`.
+Queue processor picks it up 15 min after trigger_at. If `orders/paid` fires first → `recovered = true` → email skipped.
 1. Brief reminder — show what they left
 2. Founder personal nudge (text-only)
 3. Social proof (reviews of abandoned product)
@@ -86,12 +102,13 @@ Trigger: list subscribe.
 8. "What happened?" founder personal touch
 
 #### A.3 Post-Purchase (3 emails)
+Trigger: `orders/paid` webhook. Insert into `automation_queue` with `flow_type = 'post_purchase'`, `trigger_at = now + 1h`.
 1. Heartfelt thank you + brand mission + add-to-order option
 2. Community building, social links
 3. Product education — get the most from purchase
 
-#### A.4 Win-back (4 emails) — NEW vs prior spec
-Trigger: customer no purchase in 90 days AND last open <60d.
+#### A.4 Win-back (4 emails)
+Trigger: customer no purchase in 90 days. Job D queries `email_contacts` + `shopify_orders` to find candidates, inserts into `automation_queue`.
 1. "We miss you" — soft + personal
 2. Curated bestsellers selection for them
 3. Comeback offer (15% off)
@@ -132,6 +149,7 @@ Per `my-gruns-style-rules.md` for image campaigns. Infographics: checklists, ico
 #### C.7 Send via SES
 Call `POST /api/email/send` with `{ bulk: true, to: [email array], subject, html, brand_id, campaign_id }`.
 3 sends per week. Send to base segment (X-Day Engaged). Insert `email_campaigns` row before sending, update `status='sent'` after.
+Recipient list: query `email_contacts` (subscribed = true) + Shopify customers via REST `/admin/api/customers.json`.
 
 ### Job D — Nightly 03:00 — deliverability + segmentation
 
@@ -204,7 +222,7 @@ Segments refreshed: 5
 
 ---
 
-## Owner's playbook (verbatim — see `references/my-mailjet-flows.md` for full 4-flow detail, S.C.E, design rules, deliverability, segmentation, quiz, popup)
+## Owner's playbook (verbatim — see `references/my-ses-flows.md` for full 4-flow detail, S.C.E, design rules, deliverability, segmentation, quiz, popup)
 
 
 ---

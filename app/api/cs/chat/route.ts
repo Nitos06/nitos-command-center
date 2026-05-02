@@ -4,6 +4,16 @@ import Anthropic from "@anthropic-ai/sdk";
 
 export const dynamic = "force-dynamic";
 
+const CORS = {
+  "Access-Control-Allow-Origin":  "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS });
+}
+
 function serviceClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -82,9 +92,9 @@ If you don't know the answer, say you'll escalate to a human agent. Never make u
       subject: message.slice(0, 80),
     }, { onConflict: "id", ignoreDuplicates: true });
 
-    return NextResponse.json({ reply, sessionId: sid });
+    return NextResponse.json({ reply, sessionId: sid }, { headers: CORS });
   } catch (err: any) {
     console.error("[cs/chat]", err);
-    return NextResponse.json({ error: err.message ?? "Internal error" }, { status: 500 });
+    return NextResponse.json({ error: err.message ?? "Internal error" }, { status: 500, headers: CORS });
   }
 }

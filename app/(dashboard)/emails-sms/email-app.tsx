@@ -9,6 +9,8 @@ import {
   MoreHorizontal, Eye, MousePointerClick, Ban, AlertTriangle,
   RefreshCw, Minus, ArrowUpRight, Upload, Trash2, Edit2,
   Calendar, BarChart, Activity, Globe, Inbox, XCircle, Info, Code2,
+  BookOpen, Webhook, Timer, ShoppingCart, Heart, RotateCcw, Gift,
+  Monitor, Smartphone, CheckSquare, ExternalLink,
 } from "lucide-react";
 import MjmlDesigner from "./mjml-designer";
 import {
@@ -94,6 +96,7 @@ interface EmailAppProps {
   agentLogs: AgentLog[];
   brandSettings: any;
   stats: Stats;
+  popupConfig?: PopupConfig;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -139,6 +142,7 @@ const MAIN_TABS = [
   { key: "automation",        label: "Automation",        icon: Zap },
   { key: "brand-kit",         label: "Brand Kit",         icon: Palette },
   { key: "compare",           label: "Compare Campaigns", icon: GitCompare },
+  { key: "guide",             label: "Guide",             icon: BookOpen },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -444,105 +448,291 @@ function StatsTab({ chartData, stats }: { chartData: any[]; stats: Stats }) {
 // TAB: FORMS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const DEMO_FORMS = [
-  { id: "f1", name: "Homepage Newsletter Signup", subscribers: 842, status: "active", embedType: "popup" },
-  { id: "f2", name: "Exit Intent - 10% Off",      subscribers: 214, status: "active", embedType: "exit-intent" },
-  { id: "f3", name: "Footer Inline Form",          subscribers: 67,  status: "paused", embedType: "inline" },
-];
+interface PopupConfig {
+  id?: string;
+  brand_id?: string;
+  headline?: string;
+  subtext?: string;
+  style?: "popup" | "flyout";
+  delay_seconds?: number;
+  cooldown_days?: number;
+  bg_color?: string;
+  accent_color?: string;
+  show_name_field?: boolean;
+  button_text?: string;
+  is_active?: boolean;
+}
 
-function FormsTab({ brandId }: { brandId: string }) {
-  const [creating, setCreating] = useState(false);
-  const [copied, setCopied]     = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", embedType: "popup" });
+function PopupPreview({ cfg }: { cfg: PopupConfig }) {
+  const isFlyout = cfg.style === "flyout";
+  const accent = cfg.accent_color ?? "#6366f1";
+  const bg = cfg.bg_color ?? "#ffffff";
 
-  function copyCode(id: string, code: string) {
-    navigator.clipboard.writeText(code);
-    setCopied(id); setTimeout(() => setCopied(null), 2000);
+  const card = (
+    <div style={{
+      background: bg, borderRadius: 14, padding: "22px 20px 18px", width: "100%",
+      maxWidth: isFlyout ? 260 : 300, boxShadow: "0 8px 32px rgba(0,0,0,0.14)",
+      position: "relative",
+    }}>
+      {/* fake X */}
+      <div style={{ position: "absolute", top: 10, right: 12, fontSize: 16, color: "#9ca3af", cursor: "default" }}>✕</div>
+      <p style={{ margin: "0 0 5px", fontSize: 16, fontWeight: 700, color: "#111827" }}>{cfg.headline || "Headline"}</p>
+      <p style={{ margin: "0 0 14px", fontSize: 12, color: "#6b7280" }}>{cfg.subtext || "Subtext"}</p>
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 7 }}>
+        {cfg.show_name_field && (
+          <div style={{ padding: "8px 10px", border: "1.5px solid #e5e7eb", borderRadius: 7, fontSize: 12, color: "#9ca3af" }}>First name</div>
+        )}
+        <div style={{ padding: "8px 10px", border: "1.5px solid #e5e7eb", borderRadius: 7, fontSize: 12, color: "#9ca3af" }}>Email address *</div>
+        <div style={{ padding: 9, background: accent, color: "#fff", borderRadius: 7, fontSize: 13, fontWeight: 600, textAlign: "center" as const }}>
+          {cfg.button_text || "Subscribe"}
+        </div>
+      </div>
+      <p style={{ margin: "8px 0 0", fontSize: 9, color: "#d1d5db", textAlign: "center" as const }}>No spam. Unsubscribe anytime.</p>
+    </div>
+  );
+
+  if (isFlyout) {
+    return (
+      <div style={{ background: "linear-gradient(135deg,#e8eaf0 0%,#d0d3df 100%)", borderRadius: 12, padding: 20, minHeight: 200, position: "relative" }}>
+        <div style={{ position: "absolute", bottom: 20, right: 20 }}>{card}</div>
+        {/* mock browser chrome */}
+        <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 12 }}>
+          <div style={{ background: "#fff", borderRadius: 6, padding: "6px 10px", display: "inline-block", border: "1px solid #e5e7eb" }}>yourstore.com</div>
+        </div>
+        <div style={{ height: 50, background: "rgba(255,255,255,0.4)", borderRadius: 8, marginBottom: 8 }} />
+        <div style={{ height: 30, background: "rgba(255,255,255,0.3)", borderRadius: 8, width: "70%" }} />
+      </div>
+    );
   }
 
-  const embedCode = (fid: string) =>
-    `<script src="${typeof window !== "undefined" ? window.location.origin : ""}/forms.js" data-form="${fid}" data-brand="${brandId}"></script>`;
+  return (
+    <div style={{ background: "rgba(0,0,0,0.35)", borderRadius: 12, padding: "40px 20px", display: "flex", justifyContent: "center", minHeight: 220 }}>
+      {card}
+    </div>
+  );
+}
+
+function FormsTab({ brandId, popupConfig: initialConfig }: { brandId: string; popupConfig?: PopupConfig }) {
+  const appOrigin = typeof window !== "undefined" ? window.location.origin : "";
+  const embedCode = `<script src="${appOrigin}/api/widgets/popup?shop=${brandId}" defer></script>`;
+
+  const [cfg, setCfg] = useState<PopupConfig>(initialConfig ?? {
+    headline: "Get 10% off your first order",
+    subtext: "Join our list for exclusive deals.",
+    style: "popup",
+    delay_seconds: 8,
+    cooldown_days: 7,
+    bg_color: "#ffffff",
+    accent_color: "#6366f1",
+    show_name_field: true,
+    button_text: "Subscribe & save",
+    is_active: false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [toast,  setToast]  = useState("");
+
+  function copyEmbed() {
+    navigator.clipboard.writeText(embedCode);
+    setCopied(true); setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function publish() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/widgets/popup-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brand_id: brandId, ...cfg, is_active: true }),
+      });
+      if (res.ok) {
+        const { config } = await res.json();
+        setCfg(config ?? { ...cfg, is_active: true });
+        setToast("Popup published and live! ✓");
+        setTimeout(() => setToast(""), 4000);
+      }
+    } finally { setSaving(false); }
+  }
+
+  async function saveDraft() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/widgets/popup-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brand_id: brandId, ...cfg }),
+      });
+      if (res.ok) {
+        const { config } = await res.json();
+        setCfg(config ?? cfg);
+        setToast("Saved as draft");
+        setTimeout(() => setToast(""), 3000);
+      }
+    } finally { setSaving(false); }
+  }
+
+  const inp = "w-full px-3 py-2 text-sm border border-[var(--border)] rounded-lg focus:outline-none focus:ring-1 focus:ring-[var(--accent)]";
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Subscription Forms</h3>
-          <p className="text-xs text-[var(--text-secondary)] mt-0.5">Capture leads with embeddable forms connected to your contact lists</p>
-        </div>
-        <button onClick={() => setCreating(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent)] text-white rounded-lg text-xs font-medium hover:opacity-90">
-          <Plus className="w-3.5 h-3.5" /> New Form
-        </button>
-      </div>
-
-      {creating && (
-        <div className="card p-4 border-2 border-[var(--accent)]/30 space-y-3">
-          <h3 className="text-sm font-semibold">Create Form</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-[var(--text-secondary)] block mb-1">Form name</label>
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. Popup Newsletter"
-                className="w-full px-3 py-1.5 text-sm border border-[var(--border)] rounded-lg focus:outline-none" />
-            </div>
-            <div>
-              <label className="text-xs text-[var(--text-secondary)] block mb-1">Type</label>
-              <select value={form.embedType} onChange={(e) => setForm({ ...form, embedType: e.target.value })}
-                className="w-full px-3 py-1.5 text-sm border border-[var(--border)] rounded-lg focus:outline-none">
-                <option value="popup">Popup</option>
-                <option value="inline">Inline</option>
-                <option value="exit-intent">Exit Intent</option>
-                <option value="slide-in">Slide-in</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => setCreating(false)}
-              className="px-4 py-1.5 bg-[var(--accent)] text-white rounded-lg text-xs font-medium hover:opacity-90">Create</button>
-            <button onClick={() => setCreating(false)}
-              className="px-4 py-1.5 border border-[var(--border)] rounded-lg text-xs hover:bg-[var(--surface-tint)]">Cancel</button>
-          </div>
+      {toast && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2.5 rounded-lg text-sm flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" /> {toast}
         </div>
       )}
 
-      <div className="space-y-3">
-        {DEMO_FORMS.map((f) => (
-          <div key={f.id} className="card p-4">
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm text-[var(--text-primary)]">{f.name}</span>
-                  {statusBadge(f.status)}
-                  <span className="text-xs text-[var(--text-secondary)] bg-[var(--surface-tint)] px-2 py-0.5 rounded">{f.embedType}</span>
-                </div>
-                <div className="text-xs text-[var(--text-secondary)] mt-1">{f.subscribers.toLocaleString()} subscribers captured</div>
-              </div>
-              <div className="flex gap-1.5">
-                <button className="p-1.5 border border-[var(--border)] rounded hover:bg-[var(--surface-tint)]"><Edit2 className="w-3.5 h-3.5 text-[var(--text-secondary)]" /></button>
-                <button className="p-1.5 border border-[var(--border)] rounded hover:bg-[var(--surface-tint)]"><Trash2 className="w-3.5 h-3.5 text-red-400" /></button>
-              </div>
-            </div>
-
-            {/* Embed code */}
-            <div className="bg-[var(--surface-tint)] rounded-lg p-3 flex items-center gap-2">
-              <code className="text-xs font-mono text-[var(--text-secondary)] flex-1 truncate">{embedCode(f.id)}</code>
-              <button onClick={() => copyCode(f.id, embedCode(f.id))}
-                className="flex items-center gap-1 px-2 py-1 bg-white border border-[var(--border)] rounded text-xs hover:bg-[var(--surface-tint)]">
-                {copied === f.id ? <CheckCircle2 className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                {copied === f.id ? "Copied" : "Copy"}
-              </button>
-            </div>
-          </div>
-        ))}
+      {/* Header bar */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Email Capture Widget</h3>
+          <p className="text-xs text-[var(--text-secondary)] mt-0.5">Design your popup, preview it live, then publish to your store</p>
+        </div>
+        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${cfg.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${cfg.is_active ? "bg-green-500 animate-pulse" : "bg-gray-400"}`} />
+          {cfg.is_active ? "Live on store" : "Not published"}
+        </div>
       </div>
 
-      <div className="card p-4 bg-blue-50 border-blue-200">
-        <div className="flex gap-3">
-          <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-          <div className="text-xs text-blue-700">
-            <div className="font-semibold mb-1">How forms connect to your email agent</div>
-            <div>New subscribers are automatically added to your Supabase <code className="bg-blue-100 px-1 rounded">segments</code> table and tagged by form source. The email agent reads segment membership to personalize flows and campaigns.</div>
+      {/* Canvas: two panels */}
+      <div className="grid grid-cols-[380px_1fr] gap-4 items-start">
+
+        {/* LEFT — settings panel */}
+        <div className="card p-5 space-y-4">
+          <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Settings</p>
+
+          {/* Style selector */}
+          <div>
+            <label className="text-xs font-medium text-[var(--text-secondary)] block mb-2">Widget style</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { val: "popup",  label: "Popup",  desc: "Centered modal", icon: Monitor },
+                { val: "flyout", label: "Flyout", desc: "Corner slide-in", icon: Smartphone },
+              ].map(({ val, label, desc, icon: Icon }) => (
+                <button key={val}
+                  onClick={() => setCfg({ ...cfg, style: val as "popup" | "flyout" })}
+                  className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all text-center ${cfg.style === val ? "border-[var(--accent)] bg-[var(--accent)]/5" : "border-[var(--border)] hover:border-[var(--accent)]/40"}`}>
+                  <Icon className={`w-5 h-5 ${cfg.style === val ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"}`} />
+                  <span className={`text-xs font-semibold ${cfg.style === val ? "text-[var(--accent)]" : "text-[var(--text-primary)]"}`}>{label}</span>
+                  <span className="text-[10px] text-[var(--text-secondary)]">{desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Copy */}
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">Headline</label>
+              <input value={cfg.headline ?? ""} onChange={(e) => setCfg({ ...cfg, headline: e.target.value })}
+                placeholder="Get 10% off your first order" className={inp} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">Subtext</label>
+              <input value={cfg.subtext ?? ""} onChange={(e) => setCfg({ ...cfg, subtext: e.target.value })}
+                placeholder="Join our list for exclusive deals." className={inp} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">Button text</label>
+              <input value={cfg.button_text ?? ""} onChange={(e) => setCfg({ ...cfg, button_text: e.target.value })}
+                placeholder="Subscribe & save" className={inp} />
+            </div>
+          </div>
+
+          {/* Colors */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">Accent color</label>
+              <div className="flex items-center gap-2">
+                <input type="color" value={cfg.accent_color ?? "#6366f1"} onChange={(e) => setCfg({ ...cfg, accent_color: e.target.value })}
+                  className="w-8 h-8 rounded cursor-pointer border border-[var(--border)] shrink-0" />
+                <input value={cfg.accent_color ?? "#6366f1"} onChange={(e) => setCfg({ ...cfg, accent_color: e.target.value })}
+                  className="flex-1 px-2 py-1.5 text-xs border border-[var(--border)] rounded-lg font-mono focus:outline-none" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">Background</label>
+              <div className="flex items-center gap-2">
+                <input type="color" value={cfg.bg_color ?? "#ffffff"} onChange={(e) => setCfg({ ...cfg, bg_color: e.target.value })}
+                  className="w-8 h-8 rounded cursor-pointer border border-[var(--border)] shrink-0" />
+                <input value={cfg.bg_color ?? "#ffffff"} onChange={(e) => setCfg({ ...cfg, bg_color: e.target.value })}
+                  className="flex-1 px-2 py-1.5 text-xs border border-[var(--border)] rounded-lg font-mono focus:outline-none" />
+              </div>
+            </div>
+          </div>
+
+          {/* Timing */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">Show after (seconds)</label>
+              <input type="number" min={2} max={120} value={cfg.delay_seconds ?? 8}
+                onChange={(e) => setCfg({ ...cfg, delay_seconds: Number(e.target.value) })}
+                className={inp} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">Hide for (days after close)</label>
+              <input type="number" min={1} max={365} value={cfg.cooldown_days ?? 7}
+                onChange={(e) => setCfg({ ...cfg, cooldown_days: Number(e.target.value) })}
+                className={inp} />
+            </div>
+          </div>
+
+          {/* Toggles */}
+          <div className="space-y-2 pt-1">
+            <label className="flex items-center justify-between cursor-pointer group">
+              <span className="text-xs text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">Show name field</span>
+              <button onClick={() => setCfg({ ...cfg, show_name_field: !cfg.show_name_field })}
+                className={`w-10 h-5 rounded-full transition-colors relative ${cfg.show_name_field ? "bg-[var(--accent)]" : "bg-gray-200"}`}>
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${cfg.show_name_field ? "left-5" : "left-0.5"}`} />
+              </button>
+            </label>
+          </div>
+
+          {/* Action buttons */}
+          <div className="pt-2 space-y-2">
+            <button onClick={publish} disabled={saving}
+              className="w-full py-2.5 bg-[var(--accent)] text-white rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2">
+              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckSquare className="w-4 h-4" />}
+              {saving ? "Publishing…" : "Publish to Store"}
+            </button>
+            <button onClick={saveDraft} disabled={saving}
+              className="w-full py-2 border border-[var(--border)] text-[var(--text-secondary)] rounded-xl text-xs hover:bg-[var(--surface-tint)] disabled:opacity-50">
+              Save as draft
+            </button>
+          </div>
+        </div>
+
+        {/* RIGHT — live preview */}
+        <div className="space-y-3">
+          <div className="card p-4">
+            <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">Live Preview</p>
+            <PopupPreview cfg={cfg} />
+            <p className="text-[10px] text-[var(--text-secondary)] text-center mt-3">
+              Preview updates in real-time as you edit settings ↑
+            </p>
+          </div>
+
+          {/* Embed code */}
+          <div className="card p-4 space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Embed Code</p>
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                Paste this one line into your Shopify theme's <code className="bg-[var(--surface-tint)] px-1 rounded">{"<head>"}</code> or before <code className="bg-[var(--surface-tint)] px-1 rounded">{"</body>"}</code>
+              </p>
+            </div>
+            <div className="bg-[var(--surface-tint)] rounded-lg p-3 flex items-center gap-2">
+              <code className="text-xs font-mono text-[var(--text-secondary)] flex-1 overflow-x-auto whitespace-nowrap select-all">{embedCode}</code>
+              <button onClick={copyEmbed}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-[var(--border)] rounded text-xs hover:bg-[var(--surface-tint)] shrink-0">
+                {copied ? <CheckCircle2 className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+            <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+              <Info className="w-3.5 h-3.5 text-blue-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-blue-700">
+                Popup shows after <strong>{cfg.delay_seconds ?? 8}s</strong> on every page. After a visitor closes it, it won't appear again for <strong>{cfg.cooldown_days ?? 7} days</strong>. Sign-ups automatically trigger your Welcome flow via SES.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -1187,6 +1377,270 @@ function CompareCampaignsTab({ campaigns }: { campaigns: Campaign[] }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// TAB: GUIDE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const FLOWS_GUIDE = [
+  {
+    icon: Mail,
+    color: "bg-indigo-500",
+    title: "Welcome Flow",
+    trigger: "Email capture (popup or quiz)",
+    timing: "Immediate → 14 days",
+    emails: 8,
+    description: "Fires as soon as someone subscribes. Converts curious visitors into first-time buyers by building trust, delivering on the signup offer, and creating urgency.",
+    steps: [
+      { label: "Email 1", note: "Discount / offer delivery — immediate" },
+      { label: "Email 2", note: "Founder story + brand mission — +24h" },
+      { label: "Email 3", note: "Brand USPs, why we stand out — +48h" },
+      { label: "Email 4", note: "Discount reminder with urgency — +48h" },
+      { label: "Email 5", note: "Social proof (reviews, UGC) — +48h" },
+      { label: "Email 6", note: "Product education — +72h" },
+      { label: "Email 7", note: "Last-chance discount, heavy urgency — +48h" },
+      { label: "Email 8", note: "Personal 'everything okay?' from founder — +72h" },
+    ],
+  },
+  {
+    icon: ShoppingCart,
+    color: "bg-amber-500",
+    title: "Cart Abandon Flow",
+    trigger: "Shopify checkout.create webhook (real-time)",
+    timing: "4 hours after abandon → 14 days",
+    emails: 8,
+    description: "70–85% of carts are abandoned. Shopify fires a webhook the moment someone reaches checkout. If they haven't purchased after 4 hours, we send the first email. If they buy, we mark it recovered and stop the sequence.",
+    steps: [
+      { label: "Email 1", note: "Friendly reminder — show their cart + checkout URL — +4h" },
+      { label: "Email 2", note: "Founder personal nudge (text-only) — +24h" },
+      { label: "Email 3", note: "Social proof for the abandoned product — +48h" },
+      { label: "Email 4", note: "FAQ / objection handling — +48h" },
+      { label: "Email 5", note: "Discount intro (if needed) — +72h" },
+      { label: "Email 6", note: "More social proof + discount — +72h" },
+      { label: "Email 7", note: "Last-chance urgency — +72h" },
+      { label: "Email 8", note: "'What happened?' founder personal touch — +96h" },
+    ],
+  },
+  {
+    icon: Heart,
+    color: "bg-green-500",
+    title: "Post-Purchase Flow",
+    trigger: "Shopify orders/paid webhook",
+    timing: "1 hour after purchase → 5 days",
+    emails: 3,
+    description: "Reduces buyer's remorse, builds community, and plants the seed for repeat purchases. Triggered automatically when payment is confirmed.",
+    steps: [
+      { label: "Email 1", note: "Heartfelt thank you + mission + add-to-order — +1h" },
+      { label: "Email 2", note: "Community building, social media links — +72h" },
+      { label: "Email 3", note: "Product education, get the most from your purchase — +5d" },
+    ],
+  },
+  {
+    icon: RotateCcw,
+    color: "bg-purple-500",
+    title: "Win-Back Flow",
+    trigger: "Nightly job — no purchase in 90 days",
+    timing: "Immediate → 6 days",
+    emails: 4,
+    description: "Re-engages dormant customers. Runs nightly against all subscribers with no purchase in the past 90 days. Final email bifurcates: buy or cleanly unsubscribe.",
+    steps: [
+      { label: "Email 1", note: "'We miss you' — soft + personal — immediate" },
+      { label: "Email 2", note: "Curated bestsellers for them — +48h" },
+      { label: "Email 3", note: "Comeback offer (15% off) — +72h" },
+      { label: "Email 4", note: "Final goodbye — buy or unsubscribe — +72h" },
+    ],
+  },
+];
+
+function GuideTab() {
+  const [openFlow, setOpenFlow] = useState<number | null>(null);
+
+  return (
+    <div className="space-y-6 max-w-4xl">
+
+      {/* Hero */}
+      <div className="card p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--accent)] flex items-center justify-center shrink-0">
+            <BookOpen className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">Email Marketing System — How It Works</h2>
+            <p className="text-sm text-[var(--text-secondary)] mt-1 max-w-2xl">
+              Nitos is a fully real-time email engine built on Amazon SES. Every trigger happens instantly — no midnight batch jobs.
+              Flows run per brand, fully multi-tenant, using Shopify webhooks + Supabase + SES.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Architecture overview */}
+      <div>
+        <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">How It All Connects</h3>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { icon: Webhook, label: "Shopify Webhooks", desc: "checkouts/create + orders/paid fire in real-time. No polling.", color: "text-green-600 bg-green-50 border-green-200" },
+            { icon: Timer,   label: "automation_queue",  desc: "Every trigger inserts a row with trigger_at. Processor checks every 15 min.", color: "text-amber-600 bg-amber-50 border-amber-200" },
+            { icon: Send,    label: "Amazon SES",        desc: "All outbound email. Open / click / bounce events come back via SNS webhooks.", color: "text-indigo-600 bg-indigo-50 border-indigo-200" },
+          ].map(({ icon: Icon, label, desc, color }) => (
+            <div key={label} className={`card p-4 border ${color.split(" ").slice(2).join(" ")}`}>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-3 ${color.split(" ").slice(0, 2).join(" ")}`}>
+                <Icon className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-bold text-[var(--text-primary)]">{label}</p>
+              <p className="text-xs text-[var(--text-secondary)] mt-1">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Multi-brand */}
+      <div className="card p-4 border border-blue-200 bg-blue-50">
+        <div className="flex items-start gap-3">
+          <Globe className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-blue-800">Multi-Brand Architecture</p>
+            <p className="text-xs text-blue-700 mt-1">
+              Every webhook includes <code className="bg-blue-100 px-1 rounded">x-shopify-shop-domain</code>. We look up the matching <code className="bg-blue-100 px-1 rounded">brand_id</code> from <code className="bg-blue-100 px-1 rounded">brand_settings.shopify_domain</code>.
+              All flows, sends, and queue rows are scoped to <code className="bg-blue-100 px-1 rounded">brand_id</code> — completely isolated per merchant.
+              One Nitos installation serves unlimited stores simultaneously.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 4 Flows */}
+      <div>
+        <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">The 4 Automation Flows</h3>
+        <div className="space-y-3">
+          {FLOWS_GUIDE.map((flow, i) => {
+            const Icon = flow.icon;
+            const isOpen = openFlow === i;
+            return (
+              <div key={flow.title} className="card overflow-hidden">
+                <button
+                  onClick={() => setOpenFlow(isOpen ? null : i)}
+                  className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-[var(--surface-tint)] transition-colors"
+                >
+                  <div className={`w-9 h-9 rounded-xl ${flow.color} flex items-center justify-center shrink-0`}>
+                    <Icon className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm text-[var(--text-primary)]">{flow.title}</span>
+                      <span className="text-xs bg-[var(--surface-tint)] border border-[var(--border)] px-2 py-0.5 rounded-full text-[var(--text-secondary)]">
+                        {flow.emails} email{flow.emails !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="text-xs text-[var(--text-secondary)] mt-0.5 flex items-center gap-3">
+                      <span>Trigger: <span className="font-medium text-[var(--text-primary)]">{flow.trigger}</span></span>
+                      <span>·</span>
+                      <span>{flow.timing}</span>
+                    </div>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-[var(--text-secondary)] transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {isOpen && (
+                  <div className="border-t border-[var(--border)] px-5 py-4 space-y-4">
+                    <p className="text-sm text-[var(--text-secondary)]">{flow.description}</p>
+                    <div className="space-y-1.5">
+                      {flow.steps.map((step, si) => (
+                        <div key={si} className="flex items-start gap-3">
+                          <div className={`mt-0.5 w-5 h-5 rounded-full ${flow.color} flex items-center justify-center shrink-0`}>
+                            <span className="text-white text-[9px] font-bold">{si + 1}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold text-[var(--text-primary)]">{step.label}</span>
+                            <span className="text-xs text-[var(--text-secondary)] ml-2">{step.note}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Popup widget */}
+      <div>
+        <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">Email Capture Widget</h3>
+        <div className="card p-5 space-y-3">
+          <p className="text-sm text-[var(--text-secondary)]">
+            A lightweight vanilla JS widget ({"<"}3KB) injected into any Shopify theme via a single script tag. It reads its config from the Nitos API, shows after a configurable delay, and submits captures to <code className="bg-[var(--surface-tint)] px-1 rounded text-xs">/api/email/capture</code>.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "Trigger",         value: "Time delay (configurable seconds)" },
+              { label: "Styles",          value: "Centered popup OR corner flyout" },
+              { label: "Cooldown",        value: "localStorage — configurable days" },
+              { label: "On submit",       value: "Upserts contact → fires Welcome Flow via SES" },
+              { label: "Multi-brand",     value: "Each brand gets its own config via brand_id" },
+              { label: "Install",         value: "One <script> tag — no theme code changes" },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" />
+                <div>
+                  <span className="text-xs font-semibold text-[var(--text-primary)]">{label}: </span>
+                  <span className="text-xs text-[var(--text-secondary)]">{value}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Campaign system */}
+      <div>
+        <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">Campaign Engine</h3>
+        <div className="card p-5 space-y-3">
+          <p className="text-sm text-[var(--text-secondary)]">
+            The email agent runs every Monday at 07:00 and plans 3 campaigns for the week: 2 educational + 1 fun. Each campaign follows the S.C.E formula (Skimmable · Clear&Concise · Engaging) and is designed in one of three tiers:
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { tier: "Gruns-style", desc: "Image-rich, infographics, comparison charts. Visual-first.", freq: "1–2× per week" },
+              { tier: "Hybrid",      desc: "Mixed text + image. Balanced and versatile.",               freq: "1× per week" },
+              { tier: "Text-only",   desc: "Used only for elite-tier value info. Max authority.",       freq: "As needed" },
+            ].map(({ tier, desc, freq }) => (
+              <div key={tier} className="bg-[var(--surface-tint)] rounded-xl p-3">
+                <p className="text-xs font-bold text-[var(--text-primary)]">{tier}</p>
+                <p className="text-xs text-[var(--text-secondary)] mt-1">{desc}</p>
+                <p className="text-xs text-[var(--accent)] font-medium mt-2">{freq}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Deliverability */}
+      <div>
+        <h3 className="text-sm font-bold text-[var(--text-primary)] mb-3">Deliverability Targets</h3>
+        <div className="grid grid-cols-5 gap-2">
+          {[
+            { metric: "Open Rate",     target: ">45%",    color: "text-green-600 bg-green-50 border-green-200" },
+            { metric: "Click Rate",    target: ">1%",     color: "text-blue-600 bg-blue-50 border-blue-200" },
+            { metric: "Bounce Rate",   target: "<1%",     color: "text-amber-600 bg-amber-50 border-amber-200" },
+            { metric: "Spam Rate",     target: "<0.01%",  color: "text-red-600 bg-red-50 border-red-200" },
+            { metric: "Unsubscribe",   target: "<0.5%",   color: "text-purple-600 bg-purple-50 border-purple-200" },
+          ].map(({ metric, target, color }) => (
+            <div key={metric} className={`card p-3 border text-center ${color.split(" ").slice(2).join(" ")}`}>
+              <div className={`text-lg font-bold ${color.split(" ")[0]}`}>{target}</div>
+              <div className="text-xs text-[var(--text-secondary)] mt-0.5">{metric}</div>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-[var(--text-secondary)] mt-2">
+          If open rate drops below 45%, the agent automatically activates shrink-to-win mode: pauses wide sends, sends to 14-day-engaged only until recovery, then gradually expands back.
+        </p>
+      </div>
+
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // AGENT LOG SIDEBAR
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1231,7 +1685,7 @@ function AgentLogPanel({ logs }: { logs: AgentLog[] }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function EmailApp({
-  brandId, flows, campaigns, segments, contacts, chartData, agentLogs, brandSettings, stats,
+  brandId, flows, campaigns, segments, contacts, chartData, agentLogs, brandSettings, stats, popupConfig,
 }: EmailAppProps) {
   const [tab, setTab] = useState("campaigns");
 
@@ -1285,12 +1739,13 @@ export function EmailApp({
         {tab === "campaigns"     && <CampaignsTab campaigns={campaigns} brandId={brandId} />}
         {tab === "designer"      && <MjmlDesigner brandId={brandId} />}
         {tab === "stats"         && <StatsTab chartData={chartData} stats={stats} />}
-        {tab === "forms"         && <FormsTab brandId={brandId} />}
+        {tab === "forms"         && <FormsTab brandId={brandId} popupConfig={popupConfig} />}
         {tab === "contact-lists" && <ContactListsTab contacts={contacts} brandId={brandId} />}
         {tab === "segmentation"  && <SegmentationTab segments={segments} brandId={brandId} />}
         {tab === "automation"    && <AutomationTab flows={flows} brandId={brandId} />}
         {tab === "brand-kit"     && <BrandKitTab brandSettings={brandSettings} brandId={brandId} />}
         {tab === "compare"       && <CompareCampaignsTab campaigns={campaigns} />}
+        {tab === "guide"         && <GuideTab />}
       </div>
 
       {/* Agent log */}
