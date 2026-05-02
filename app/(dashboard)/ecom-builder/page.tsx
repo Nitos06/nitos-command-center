@@ -127,6 +127,24 @@ Then send your sourcing findings to coworker with this prompt:
 13 | Longevity balance            | Not just a 2-week trend                                            | More stable business
 14 | Low return risk              | Simple usage, low defect chance                                    | Protects your margins`,
       },
+      {
+        label: "Step 3 — Brand the Product Images",
+        content: `After manually deciding on what products to use based on what AI gave us, we put all the product links in one doc (if it's not a huge store).
+
+We want to use Claude coworker and write him the following prompt:
+
+"I need you to go to KIE AI and use those products images and change their background to [X] and add our logo [add logo] and our brand name [add brand name] to the products itself, render the text and logo."`,
+      },
+      {
+        label: "Step 4 — Connect Supplier to Store",
+        content: `We will connect CJDropshipping or HyperSKU to our store and import the products from Alibaba to the apps, or we will connect it with our 1688 supplier.`,
+      },
+      {
+        label: "Step 5 — Add Product Images to Store",
+        content: `We will tell coworker:
+
+"Add the product images to the products I created. Make sure each image is for each product."`,
+      },
     ],
   },
   {
