@@ -3,11 +3,5 @@
     "app/api/mcp/route.ts": { "maxDuration": 60 },
     "app/api/routines/[routine]/route.ts": { "maxDuration": 300 },
     "app/api/email/queue-processor/route.ts": { "maxDuration": 60 }
-  },
-  "crons": [
-    {
-      "path": "/api/email/queue-processor",
-      "schedule": "*/15 * * * *"
-    }
-  ]
+  }
 }
