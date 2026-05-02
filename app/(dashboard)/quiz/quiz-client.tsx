@@ -69,6 +69,7 @@ function DesignConfigureTab({ brandId, quizzes }: { brandId: string; quizzes: an
 
   // Email gate
   const [emailGate, setEmailGate] = useState(true);
+  const [showName, setShowName] = useState(true);
   const [showSms, setShowSms] = useState(false);
   const [gateHeading, setGateHeading] = useState("See your results");
   const [gateSubtext, setGateSubtext] = useState("Enter your email to unlock your personalized recommendation.");
@@ -192,6 +193,11 @@ function DesignConfigureTab({ brandId, quizzes }: { brandId: string; quizzes: an
                   <p className="text-gray-400 text-xs leading-relaxed">{gateSubtext}</p>
                 </div>
                 <div className="space-y-2.5">
+                  {showName && (
+                    <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(255,255,255,0.07)", border: `1.5px solid ${optionBorder}`, color: "rgba(255,255,255,0.4)" }}>
+                      First name *
+                    </div>
+                  )}
                   <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(255,255,255,0.07)", border: `1.5px solid ${optionBorder}`, color: "rgba(255,255,255,0.4)" }}>
                     Email address *
                   </div>
@@ -507,6 +513,18 @@ function DesignConfigureTab({ brandId, quizzes }: { brandId: string; quizzes: an
               <>
                 <div className="flex items-center justify-between py-3 border-b border-gray-100">
                   <div>
+                    <p className="text-sm font-medium text-gray-800">Show name field</p>
+                    <p className="text-xs text-gray-500 mt-0.5">First name input above the email field</p>
+                  </div>
+                  <button
+                    onClick={() => setShowName(p => !p)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${showName ? "bg-indigo-600" : "bg-gray-200"}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${showName ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                  <div>
                     <p className="text-sm font-medium text-gray-800">Show SMS/phone field</p>
                     <p className="text-xs text-gray-500 mt-0.5">Optional opt-in below the email field</p>
                   </div>
@@ -549,6 +567,7 @@ function DesignConfigureTab({ brandId, quizzes }: { brandId: string; quizzes: an
               <div className="rounded-xl border border-dashed border-gray-200 p-4 bg-gray-50">
                 <p className="text-xs font-semibold text-gray-600 mb-2">Form preview</p>
                 <div className="space-y-2">
+                  {showName && <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-400">First name *</div>}
                   <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-400">Email address *</div>
                   {showSms && <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-400">Phone (optional)</div>}
                   <button className="w-full py-2 rounded-lg text-sm font-semibold text-white" style={{ background: accentColor, color: bgColor }}>
