@@ -40,6 +40,16 @@ const SECTIONS = [
 • Connect Wise to your Shopify Payments or payment processor
 • Use Wise to pay suppliers (1688, Alibaba, CJ) and receive revenue in multiple currencies`,
       },
+      {
+        label: "Step 4 — Google Workspace Branded Email",
+        content: `Create a branded business email using Google Workspace:
+
+• Go to workspace.google.com and start a Business Starter plan
+• Use your brand domain (e.g. hello@yourbrand.com or support@yourbrand.com)
+• Verify your domain ownership via Hostinger DNS settings (add TXT record)
+• Set up your email signature with brand name, logo, and website
+• Use this email for: Shopify store email, ad accounts, supplier communication, and customer support`,
+      },
     ],
   },
   {
@@ -177,6 +187,17 @@ We want to use Claude coworker and write him the following prompt:
         content: `We will tell coworker:
 
 "Add the product images to the products I created. Make sure each image is for each product."`,
+      },
+      {
+        label: "* Important — Configure Markets & Shipping",
+        content: `After product research is complete, configure Markets and Shipping in Shopify settings based on the shipping prices in CJDropshipping:
+
+• Go to Shopify Admin → Settings → Shipping and delivery
+• Check the shipping rates CJDropshipping shows for each destination country
+• Create shipping zones that match: e.g. US, UK, EU, Rest of World
+• Set your shipping prices to match or slightly exceed CJ's actual rates so you don't lose margin
+• Go to Shopify Admin → Settings → Markets → enable the markets you want to sell in
+• Make sure each market has the correct currency and tax settings configured`,
       },
     ],
   },
