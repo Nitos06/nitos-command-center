@@ -88,36 +88,6 @@ export default function GiftClient({ brandId, giftRules: initial }: Props) {
         </button>
       </div>
 
-      {/* How Free Gift Bar works */}
-      <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 border border-indigo-100 rounded-2xl p-5 mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-lg">🎁</span>
-          <div>
-            <div className="text-sm font-semibold text-gray-800">How Free Gift Bar works</div>
-            <div className="text-xs text-gray-500">Configure in app → connect to design → live on store</div>
-          </div>
-          <span className="ml-auto text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">Full pipeline</span>
-        </div>
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-white rounded-xl p-3 border border-gray-100">
-            <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-1">① Configure</div>
-            <div className="text-xs text-gray-700">Add a gift rule here — set the cart threshold (e.g. $75), name the gift product, and toggle it active. You can have multiple rules at different thresholds.</div>
-          </div>
-          <div className="bg-white rounded-xl p-3 border border-gray-100">
-            <div className="text-[10px] font-bold text-purple-500 uppercase tracking-wider mb-1">② Connect</div>
-            <div className="text-xs text-gray-700">Copy the two code blocks from the embed panel at the bottom. Block 1 goes on your cart page (shows the progress bar). Block 2 goes in global scripts (runs on every page to track cart changes).</div>
-          </div>
-          <div className="bg-white rounded-xl p-3 border border-gray-100">
-            <div className="text-[10px] font-bold text-green-500 uppercase tracking-wider mb-1">③ Live</div>
-            <div className="text-xs text-gray-700">Shoppers see an animated progress bar on the cart page: &quot;Add $X more to get a free [gift]&quot;. When the threshold is hit the bar turns green. The bar updates in real-time as products are added or removed.</div>
-          </div>
-        </div>
-        <div className="bg-white/80 rounded-xl p-3 border border-gray-100">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">🤖 What the agent does automatically</div>
-          <div className="text-xs text-gray-600">Monitors gift rule impact on Average Order Value weekly. If AOV increases significantly after activating a rule, it suggests lowering the threshold to unlock more conversions. If there&apos;s no impact, it recommends changing the gift product.</div>
-        </div>
-      </div>
-
       {/* Add rule form */}
       {showForm && (
         <div className="bg-white border border-indigo-200 rounded-2xl p-5 space-y-4 shadow-sm">
@@ -248,17 +218,10 @@ export default function GiftClient({ brandId, giftRules: initial }: Props) {
         </div>
       )}
 
-      {/* Embed panel */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 mt-4">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-sm font-semibold text-gray-800">📋 Add Gift Bar to Your Store</span>
-          <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Page Builder Ready</span>
-        </div>
-        <p className="text-xs text-gray-500 mb-3">Add these two code blocks in your page builder — first on your cart page, second on every page (global scripts section):</p>
-        <div className="text-xs font-medium text-gray-600 mb-1">1. Cart page — gift progress bar:</div>
-        <div className="bg-gray-900 text-green-400 text-xs font-mono p-3 rounded-xl overflow-x-auto whitespace-pre mb-3">{`<div id="gift-bar" data-brand-id="${brandId}"></div>\n<script src="https://nitaiecompro-nine.vercel.app/widgets/gift.js"></script>`}</div>
-        <div className="text-xs font-medium text-gray-600 mb-1">2. Global scripts (every page) — for cart total tracking:</div>
-        <div className="bg-gray-900 text-green-400 text-xs font-mono p-3 rounded-xl overflow-x-auto whitespace-pre">{`<script src="https://nitaiecompro-nine.vercel.app/widgets/gift.js" data-brand-id="${brandId}"></script>`}</div>
+      {/* How threshold works */}
+      <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mt-2">
+        <div className="text-xs font-semibold text-green-800 mb-1">How the threshold works</div>
+        <p className="text-xs text-green-700">When a customer&apos;s cart total reaches your configured threshold, the gift product is automatically added to their cart via Shopify&apos;s cart API. The gift.js widget installed on the store polls the cart in real-time and triggers the add-to-cart call the moment the threshold is crossed. Toggle the rule active to go live.</p>
       </div>
     </div>
   );

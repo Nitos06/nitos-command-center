@@ -806,36 +806,6 @@ function BundlesTab({ brandId, bundles: initialBundles }: { brandId: string; bun
 
   return (
     <div className="space-y-4">
-      {/* How Bundles works */}
-      <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 border border-indigo-100 rounded-2xl p-5 mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-lg">📦</span>
-          <div>
-            <div className="text-sm font-semibold text-gray-800">How Bundles works</div>
-            <div className="text-xs text-gray-500">Configure in app → connect to design → live on store</div>
-          </div>
-          <span className="ml-auto text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">Full pipeline</span>
-        </div>
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-white rounded-xl p-3 border border-gray-100">
-            <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-1">① Configure</div>
-            <div className="text-xs text-gray-700">Create a bundle here — choose type (FBT, Volume, BOGO, Fixed), add products, set discount amount, write the bundle title. Each bundle gets a unique ID.</div>
-          </div>
-          <div className="bg-white rounded-xl p-3 border border-gray-100">
-            <div className="text-[10px] font-bold text-purple-500 uppercase tracking-wider mb-1">② Connect</div>
-            <div className="text-xs text-gray-700">Copy the embed snippet from the panel at the bottom of this tab. Paste it on your product pages in cloud designer. Each product page gets its own bundle ID in the snippet.</div>
-          </div>
-          <div className="bg-white rounded-xl p-3 border border-gray-100">
-            <div className="text-[10px] font-bold text-green-500 uppercase tracking-wider mb-1">③ Live</div>
-            <div className="text-xs text-gray-700">Visitors see &quot;Frequently Bought Together&quot; product cards with one &quot;Add Bundle to Cart&quot; button. Clicking it adds all products to the Shopify cart at once. The gift bar updates automatically if a threshold is crossed.</div>
-          </div>
-        </div>
-        <div className="bg-white/80 rounded-xl p-3 border border-gray-100">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">🤖 What the agent does automatically</div>
-          <div className="text-xs text-gray-600">Analyzes Shopify order history to identify products most often bought together. Suggests new bundle combinations, monitors bundle conversion rates, and pauses underperforming bundles automatically.</div>
-        </div>
-      </div>
-
       {showNew && (
         <NewBundleModal
           brandId={brandId}
@@ -884,15 +854,6 @@ function BundlesTab({ brandId, bundles: initialBundles }: { brandId: string; bun
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 mt-4">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-sm font-semibold text-gray-800">📋 Embed Bundle on Your Store</span>
-          <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Page Builder Ready</span>
-        </div>
-        <p className="text-xs text-gray-500 mb-3">Add a Code Block in your page builder on any product page. Replace BUNDLE_ID with the bundle&apos;s ID from the list above.</p>
-        <div className="bg-gray-900 text-green-400 text-xs font-mono p-3 rounded-xl overflow-x-auto whitespace-pre">{`<div data-bundle-id="BUNDLE_ID" data-brand-id="${brandId}"></div>\n<script src="https://nitaiecompro-nine.vercel.app/widgets/bundles.js"></script>`}</div>
-        <p className="text-xs text-gray-400 mt-2">The widget fetches bundle config, renders product cards + &quot;Add Bundle to Cart&quot; button, and connects to Shopify&apos;s cart automatically.</p>
-      </div>
     </div>
   );
 }

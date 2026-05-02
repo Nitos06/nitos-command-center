@@ -1133,56 +1133,28 @@ function ExtensionTab({ brandId }: { brandId: string }) {
         </div>
       </div>
 
-      {/* Architecture diagram */}
+      {/* Architecture */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5">
-        <h3 className="text-sm font-semibold text-gray-800 mb-4">Architecture</h3>
-        <div className="flex items-center gap-2 text-xs text-gray-600 overflow-x-auto pb-2">
-          {[
-            { icon: "🛒", label: "Customer buys" },
-            { icon: "→", label: "" },
-            { icon: "⚡", label: "Shopify triggers extension" },
-            { icon: "→", label: "" },
-            { icon: "🔗", label: "Extension calls /api/pp-funnels/offer" },
-            { icon: "→", label: "" },
-            { icon: "🎯", label: "Your funnel config returned" },
-            { icon: "→", label: "" },
-            { icon: "✅", label: "Native upsell shown" },
-          ].map((item, i) => (
-            item.label === ""
-              ? <span key={i} className="text-gray-300">→</span>
-              : <div key={i} className="flex items-center gap-1 bg-gray-50 rounded-lg px-2 py-1 shrink-0">
-                  <span>{item.icon}</span>
-                  <span>{item.label}</span>
-                </div>
-          ))}
-        </div>
-        <div className="mt-3 p-3 bg-indigo-50 rounded-xl text-xs text-indigo-700">
-          <strong>Zero extension code changes needed after setup.</strong> Edit your funnels in the Funnels tab — changes go live instantly in Shopify.
-        </div>
-      </div>
-
-      {/* Setup steps */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-5">
-        <h3 className="text-sm font-semibold text-gray-800 mb-4">One-Time Setup</h3>
+        <h3 className="text-sm font-semibold text-gray-800 mb-4">How it works</h3>
         <div className="space-y-3">
-          {steps.map((step) => (
-            <div key={step.num} className="flex gap-4 p-4 border border-gray-100 rounded-xl">
-              <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">{step.num}</div>
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm text-gray-800 mb-0.5">{step.title}</div>
-                <div className="text-xs text-gray-500 mb-2">{step.desc}</div>
-                {step.code && (
-                  <div className="bg-gray-900 text-green-400 font-mono text-xs px-3 py-2 rounded-lg">{step.code}</div>
-                )}
-                {step.link && (
-                  <a href={step.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-500 hover:text-indigo-700">{step.linkLabel}</a>
-                )}
-              </div>
-              <div className="shrink-0">
-                <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Pending setup</span>
+          {[
+            { step: "1", icon: "🛒", title: "Customer completes checkout", desc: "Order goes through Shopify normally. Payment captured. Nothing unusual for the customer." },
+            { step: "2", icon: "⚡", title: "Shopify fires the post-purchase extension", desc: "Shopify natively calls our checkout extension immediately after the order is placed — before the customer sees the Thank You page." },
+            { step: "3", icon: "🔗", title: "Extension calls /api/pp-funnels/offer", desc: "The extension hits our API with the order details. We return the active funnel config for this brand — product, price, headline, image." },
+            { step: "4", icon: "🎯", title: "Upsell shown natively on Thank You page", desc: "Shopify renders the offer using their native UI. One-click accept — no re-entering payment info. Decline skips it silently." },
+            { step: "5", icon: "✅", title: "Accept or decline tracked", desc: "Accept → /api/pp-funnels/accept creates an additional order. Decline → /api/pp-funnels/decline logs it. Both feed the Analytics tab." },
+          ].map(s => (
+            <div key={s.step} className="flex gap-3 p-3 bg-gray-50 rounded-xl">
+              <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">{s.step}</div>
+              <div>
+                <div className="text-sm font-medium text-gray-800">{s.icon} {s.title}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{s.desc}</div>
               </div>
             </div>
           ))}
+        </div>
+        <div className="mt-3 p-3 bg-indigo-50 rounded-xl text-xs text-indigo-700">
+          <strong>Everything is managed from the Funnels tab.</strong> Create a funnel, set it active — changes go live instantly. No code deploys needed after the app is installed on your store.
         </div>
       </div>
 

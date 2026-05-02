@@ -207,36 +207,6 @@ function ProgramsTab({ brandId }: { brandId: string }) {
 
   return (
     <div>
-      {/* How Affiliate Marketing works */}
-      <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 border border-indigo-100 rounded-2xl p-5 mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-lg">👥</span>
-          <div>
-            <div className="text-sm font-semibold text-gray-800">How Affiliate Marketing works</div>
-            <div className="text-xs text-gray-500">Configure in app → connect to design → live on store</div>
-          </div>
-          <span className="ml-auto text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">Full pipeline</span>
-        </div>
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-white rounded-xl p-3 border border-gray-100">
-            <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-1">① Configure</div>
-            <div className="text-xs text-gray-700">Create a program here (commission %, terms). Each brand has its own programs, affiliate codes, and tracking — fully isolated. Affiliates apply and get their unique referral link (yourstore.com/products/X?ref=THEIR_CODE).</div>
-          </div>
-          <div className="bg-white rounded-xl p-3 border border-gray-100">
-            <div className="text-[10px] font-bold text-purple-500 uppercase tracking-wider mb-1">② Connect</div>
-            <div className="text-xs text-gray-700">Copy the global tracking script from the embed panel at the bottom. Paste it in your cloud designer&apos;s Global Scripts section (runs on every page of your store). That&apos;s the only thing needed in the design.</div>
-          </div>
-          <div className="bg-white rounded-xl p-3 border border-gray-100">
-            <div className="text-[10px] font-bold text-green-500 uppercase tracking-wider mb-1">③ Live</div>
-            <div className="text-xs text-gray-700">When a visitor arrives via an affiliate link, a permanent cookie is set (no expiry). When they place an order, the commission is recorded automatically. Affiliates see their stats, you see the full breakdown in the Affiliates, Referrals, Payments, and Motivation tabs.</div>
-          </div>
-        </div>
-        <div className="bg-white/80 rounded-xl p-3 border border-gray-100">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">🤖 What the agent does automatically</div>
-          <div className="text-xs text-gray-600">Monitors affiliate performance daily. Reaches out automatically to dormant affiliates (no clicks in 14 days), identifies top performers for VIP upgrade, flags suspicious click patterns (bot traffic), and processes monthly PayPal payouts for approved commissions.</div>
-        </div>
-      </div>
-
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-lg font-semibold text-gray-900">Programs</h2>
         <PrimaryBtn onClick={() => setShowNew(true)}><Plus size={14} className="inline mr-1" />New Program</PrimaryBtn>
@@ -293,16 +263,6 @@ function ProgramsTab({ brandId }: { brandId: string }) {
 
       {selectedProgram && <ProgramSlideOver program={selectedProgram} onClose={() => setSelectedProgram(null)} />}
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 mt-4">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-sm font-semibold text-gray-800">📋 Install Tracking on Your Store</span>
-          <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Add Once — Tracks Everything</span>
-        </div>
-        <p className="text-xs text-gray-500 mb-3">Add this to your page builder&apos;s <strong>global scripts</strong> (runs on every page). It reads <code className="bg-gray-100 px-1 rounded">?ref=CODE</code> from URLs and tracks affiliate clicks automatically.</p>
-        <div className="bg-gray-900 text-green-400 text-xs font-mono p-3 rounded-xl overflow-x-auto whitespace-pre mb-2">{`<!-- Add to Global Scripts (every page) -->\n<script src="https://nitaiecompro-nine.vercel.app/widgets/affiliates.js"\n  data-affiliates="${brandId}"></script>`}</div>
-        <p className="text-xs text-gray-500 mb-1">Affiliate links format: <code className="bg-gray-100 px-1 rounded">yourstore.com/products/X?ref=AFFILIATE_CODE</code></p>
-        <p className="text-xs text-gray-400">The script sets a 30-day cookie and records the click in your dashboard. Conversions are tracked when orders include the affiliate code.</p>
-      </div>
     </div>
   );
 }
