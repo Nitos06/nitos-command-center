@@ -67,7 +67,12 @@ export default async function SettingsPage() {
                   </div>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1 text-xs">
                     <div><span className="text-ink-muted">SES from:</span> <span className="text-ink">{bs?.ses_sender_email ?? <span className="text-red-400">not set</span>}</span></div>
-                    <div><span className="text-ink-muted">Shopify:</span> <span className="text-ink">{bs?.shopify_domain ?? <span className="text-amber-500">not set</span>}</span></div>
+                    <div><span className="text-ink-muted">Shopify:</span>{" "}
+                      {bs?.shopify_domain
+                        ? <span className="text-ink">{bs.shopify_domain}</span>
+                        : <a href={`/connect/shopify?brandId=${brand.id}`} className="text-primary-600 underline">Connect store</a>
+                      }
+                    </div>
                     <div><span className="text-ink-muted">Meta account:</span> <span className="text-ink">{bs?.meta_account_id ?? "—"}</span></div>
                     <div><span className="text-ink-muted">Brand bible:</span> <span className="text-ink">{bs?.brand_bible ? "✓ configured" : "—"}</span></div>
                   </div>

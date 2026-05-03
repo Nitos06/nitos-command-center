@@ -1,6 +1,6 @@
 name = "NitaiEcomPro"
 client_id = "YOUR_SHOPIFY_CLIENT_ID"
-application_url = "https://nitaiecompro-nine.vercel.app"
+application_url = "https://nitaiecompro-nine.vercel.app/connect/shopify"
 embedded = true
 
 [access_scopes]
@@ -8,7 +8,8 @@ scopes = "read_orders,write_orders,read_products,write_checkouts,read_checkouts,
 
 [auth]
 redirect_urls = [
-  "https://nitaiecompro-nine.vercel.app/api/auth/shopify/callback"
+  "https://nitaiecompro-nine.vercel.app/api/auth/shopify/callback",
+  "https://nitaiecompro-nine.vercel.app/connect/shopify"
 ]
 
 [webhooks]
