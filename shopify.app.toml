@@ -1,22 +1,35 @@
 name = "NitaiEcomPro"
 client_id = "YOUR_SHOPIFY_CLIENT_ID"
-application_url = "https://nitaiecompro-nine.vercel.app"
+application_url = "https://nitaiecompro-nine.vercel.app/connect/shopify"
 embedded = true
 
 [access_scopes]
-scopes = "read_orders,write_orders,read_products,write_checkouts,read_customers"
+scopes = "read_orders,write_orders,read_products,write_checkouts,read_checkouts,read_customers,write_customers,read_marketing_events,write_marketing_events"
 
 [auth]
 redirect_urls = [
-  "https://nitaiecompro-nine.vercel.app/api/auth/shopify/callback"
+  "https://nitaiecompro-nine.vercel.app/api/auth/shopify/callback",
+  "https://nitaiecompro-nine.vercel.app/connect/shopify"
 ]
 
 [webhooks]
 api_version = "2025-01"
 
   [[webhooks.subscriptions]]
-  topics = ["orders/paid"]
+  topics = ["orders/paid", "orders/created", "orders/fulfilled", "orders/cancelled"]
   uri = "/api/webhooks/shopify/orders"
+
+  [[webhooks.subscriptions]]
+  topics = ["refunds/create"]
+  uri = "/api/webhooks/shopify/orders"
+
+  [[webhooks.subscriptions]]
+  topics = ["checkouts/create", "checkouts/update"]
+  uri = "/api/webhooks/shopify/checkouts"
+
+  [[webhooks.subscriptions]]
+  topics = ["customers/create", "customers/update", "customers/delete"]
+  uri = "/api/webhooks/shopify/customers"
 
 [pos]
 embedded = false
