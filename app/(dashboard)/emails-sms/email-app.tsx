@@ -13,6 +13,7 @@ import {
   Monitor, Smartphone, CheckSquare, ExternalLink,
 } from "lucide-react";
 import MjmlDesigner from "./mjml-designer";
+import { CalendarTab } from "./calendar-tab";
 import {
   LineChart, Line, AreaChart, Area, BarChart as RBarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -134,14 +135,15 @@ function statusBadge(status: string) {
 
 const MAIN_TABS = [
   { key: "campaigns",         label: "Campaigns",         icon: Mail },
-  { key: "stats",             label: "Stats",             icon: BarChart2 },
+  { key: "calendar",          label: "Calendar",          icon: Calendar },
+  { key: "automation",        label: "Flows",             icon: Zap },
+  { key: "contact-lists",     label: "Contacts",          icon: Users },
+  { key: "segmentation",      label: "Segments",          icon: Layers },
+  { key: "stats",             label: "Deliverability",    icon: BarChart2 },
   { key: "designer",          label: "Email Designer",    icon: Code2 },
   { key: "forms",             label: "Forms",             icon: FileText },
-  { key: "contact-lists",     label: "Contact Lists",     icon: Users },
-  { key: "segmentation",      label: "Segmentation",      icon: Layers },
-  { key: "automation",        label: "Automation",        icon: Zap },
   { key: "brand-kit",         label: "Brand Kit",         icon: Palette },
-  { key: "compare",           label: "Compare Campaigns", icon: GitCompare },
+  { key: "compare",           label: "Compare",           icon: GitCompare },
   { key: "guide",             label: "Guide",             icon: BookOpen },
 ];
 
@@ -1737,6 +1739,7 @@ export function EmailApp({
       {/* Tab content */}
       <div>
         {tab === "campaigns"     && <CampaignsTab campaigns={campaigns} brandId={brandId} />}
+        {tab === "calendar"      && <CalendarTab brandId={brandId} />}
         {tab === "designer"      && <MjmlDesigner brandId={brandId} />}
         {tab === "stats"         && <StatsTab chartData={chartData} stats={stats} />}
         {tab === "forms"         && <FormsTab brandId={brandId} popupConfig={popupConfig} />}

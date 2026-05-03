@@ -72,6 +72,80 @@ export async function POST(req: NextRequest) {
       line_items: order.line_items,
       created_at_shopify: order.created_at,
     }, { onConflict: "shopify_order_id" });
+
+    // ── Email Marketing: log event + update contact + trigger segmentation ──
+    if (brandId && order.email) {
+      const svc = sbService();
+      // Upsert into email_contacts
+      const { data: contact } = await svc.from("email_contacts").upsert({
+        brand_id: brandId,
+        email: order.email.toLowerCase().trim(),
+        name: order.billing_address?.name ?? order.customer?.first_name ?? null,
+        source: "checkout",
+        subscribed: true,
+        shopify_customer_id: order.customer?.id ? String(order.customer.id) : null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "brand_id,email" }).select("id").maybeSingle();
+
+      const contactId = contact?.id;
+
+      // Log contact event
+      if (contactId) {
+        await svc.from("contact_events").insert({
+          brand_id: brandId,
+          contact_id: contactId,
+          email: order.email,
+          event_type: "order_placed",
+          event_data: {
+            order_id: order.id,
+            order_number: order.order_number,
+            total: order.total_price,
+            currency: order.currency,
+          },
+        });
+
+        // Update contact order stats
+        await svc.from("email_contacts")
+          .update({ last_order_at: new Date().toISOString() })
+          .eq("id", contactId);
+
+        // Trigger segment re-evaluation (async, non-blocking)
+        import("@/lib/segmentation/evaluate").then(({ evaluateContactForSegments }) => {
+          evaluateContactForSegments(brandId, contactId).catch(() => {});
+        });
+      }
+
+      // Queue post-purchase flow
+      const { data: ppFlow } = await svc.from("email_flows")
+        .select("id")
+        .eq("brand_id", brandId)
+        .eq("is_active", true)
+        .ilike("name", "%post purchase%")
+        .maybeSingle();
+
+      if (ppFlow) {
+        const { data: firstStep } = await svc.from("email_flow_steps")
+          .select("id")
+          .eq("flow_id", ppFlow.id)
+          .order("position", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        await svc.from("automation_queue").insert({
+          brand_id: brandId,
+          flow_type: "post_purchase",
+          flow_id: ppFlow.id,
+          current_step_id: firstStep?.id ?? null,
+          email: order.email,
+          customer_name: order.billing_address?.name ?? order.customer?.first_name,
+          contact_id: contactId,
+          payload: { order_number: order.order_number, total_price: order.total_price },
+          trigger_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour delay
+          sent: false,
+          recovered: false,
+        });
+      }
+    }
   }
 
   if (topic === "orders/fulfilled") {
