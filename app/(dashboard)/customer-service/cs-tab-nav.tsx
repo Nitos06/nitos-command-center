@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { MessageSquare, BookOpen, Bot, Globe, HeadphonesIcon } from "lucide-react";
+import { MessageSquare, BookOpen, Bot } from "lucide-react";
 import { TicketsChart } from "./tickets-chart";
-import { ChatbotPanel } from "./chatbot-panel";
 
 const TABS = [
   { id: "tickets",  label: "Tickets",      icon: MessageSquare },
   { id: "faq",      label: "FAQ Library",  icon: BookOpen      },
-  { id: "chatbot",  label: "Website Bot",  icon: Globe         },
   { id: "activity", label: "Agent Log",    icon: Bot           },
 ] as const;
 
@@ -40,7 +38,6 @@ export function CSTabNav({ brandId, open, faq, recentLogs, chartData, chatbotTic
             >
               <Icon className="w-3 h-3" />
               {t.label}
-              {t.id === "chatbot" && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-green-400" />}
             </button>
           );
         })}
@@ -111,11 +108,6 @@ export function CSTabNav({ brandId, open, faq, recentLogs, chartData, chatbotTic
             </ul>
           )}
         </div>
-      )}
-
-      {/* ── WEBSITE BOT ── */}
-      {tab === "chatbot" && (
-        <ChatbotPanel brandId={brandId} recentChats={chatbotTickets} appUrl={appUrl} />
       )}
 
       {/* ── AGENT LOG ── */}
