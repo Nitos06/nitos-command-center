@@ -1,0 +1,453 @@
+{% comment %}
+  Nitos Frequently Bought Together Widget — Theme App Extension Block
+  Merchants add this block from Online Store → Themes → Customize → Add section → Apps → Frequently Bought Together
+  Self-contained inline CSS + vanilla JS. No external dependencies.
+{% endcomment %}
+
+{% assign brand_id = block.settings.brand_id %}
+{% assign accent_color = block.settings.accent_color | default: "#6366f1" %}
+{% assign api_url = block.settings.api_url | default: "https://nitaiecompro-nine.vercel.app" %}
+
+<div
+  id="nitos-fbt-root"
+  data-brand="{{ brand_id | escape }}"
+  data-product="{{ product.id }}"
+  data-color="{{ accent_color | escape }}"
+  data-api="{{ api_url | escape }}"
+  {{ block.shopify_attributes }}
+></div>
+
+<style>
+  #nitos-fbt-root {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    max-width: 720px;
+  }
+
+  .nfbt-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0 0 16px;
+  }
+
+  .nfbt-items {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .nfbt-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    padding: 12px;
+    position: relative;
+    max-width: 160px;
+    flex-shrink: 0;
+  }
+
+  .nfbt-item.nfbt-unchecked {
+    opacity: 0.4;
+  }
+
+  .nfbt-checkbox {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+  }
+
+  .nfbt-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: {{ accent_color }};
+  }
+
+  .nfbt-img {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+
+  .nfbt-item-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a2e;
+    line-height: 1.3;
+    max-height: 2.6em;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .nfbt-item-price {
+    font-size: 13px;
+    color: #374151;
+    font-weight: 500;
+  }
+
+  .nfbt-item-compare {
+    text-decoration: line-through;
+    color: #9ca3af;
+    font-size: 12px;
+    margin-right: 4px;
+  }
+
+  .nfbt-separator {
+    font-size: 24px;
+    font-weight: 300;
+    color: #d1d5db;
+    padding: 0 4px;
+    align-self: center;
+    flex-shrink: 0;
+  }
+
+  .nfbt-summary {
+    margin-top: 20px;
+    padding: 16px 20px;
+    background: #f9fafb;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .nfbt-price-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .nfbt-price-label {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  .nfbt-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .nfbt-original-price {
+    text-decoration: line-through;
+    color: #9ca3af;
+    font-size: 15px;
+  }
+
+  .nfbt-bundle-price {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+
+  .nfbt-savings {
+    font-size: 12px;
+    font-weight: 600;
+    color: #059669;
+    background: #d1fae5;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  .nfbt-add-btn {
+    background: {{ accent_color }};
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 28px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.18s, transform 0.18s;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+
+  .nfbt-add-btn:hover:not(:disabled) {
+    opacity: 0.88;
+    transform: scale(1.02);
+  }
+
+  .nfbt-add-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .nfbt-loading {
+    text-align: center;
+    padding: 24px;
+    color: #9ca3af;
+    font-size: 13px;
+  }
+
+  .nfbt-error {
+    text-align: center;
+    padding: 16px;
+    color: #ef4444;
+    font-size: 13px;
+  }
+
+  @media (max-width: 520px) {
+    .nfbt-items {
+      flex-direction: column;
+    }
+    .nfbt-separator {
+      transform: rotate(90deg);
+      padding: 0;
+      margin: -4px 0;
+    }
+    .nfbt-item {
+      max-width: 100%;
+      flex-direction: row;
+      text-align: left;
+      gap: 12px;
+    }
+    .nfbt-img {
+      width: 72px;
+      height: 72px;
+    }
+    .nfbt-checkbox {
+      position: static;
+    }
+    .nfbt-summary {
+      flex-direction: column;
+      text-align: center;
+      align-items: stretch;
+    }
+    .nfbt-price-row {
+      justify-content: center;
+    }
+  }
+</style>
+
+<script>
+(function() {
+  var root = document.getElementById('nitos-fbt-root');
+  var brandId   = root.dataset.brand   || '';
+  var productId = root.dataset.product || '';
+  var apiBase   = root.dataset.api     || '';
+
+  if (!brandId || !productId) return;
+
+  root.innerHTML = '<div class="nfbt-loading">Loading recommendations&hellip;</div>';
+
+  var url = apiBase + '/api/widgets/bundles?brand=' + encodeURIComponent(brandId)
+          + '&product=' + encodeURIComponent(productId) + '&type=fbt';
+
+  var bundleDiscount = 0;
+  var items = [];
+
+  fetch(url)
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function(data) {
+      if (!data.items || !data.items.length) {
+        root.innerHTML = '';
+        return;
+      }
+      items = data.items;
+      bundleDiscount = data.bundle_discount_pct || 0;
+      render();
+    })
+    .catch(function() {
+      root.innerHTML = '<div class="nfbt-error">Unable to load recommendations.</div>';
+    });
+
+  function render() {
+    var html = '<p class="nfbt-title">Frequently Bought Together</p>';
+    html += '<div class="nfbt-items">';
+
+    items.forEach(function(item, i) {
+      if (i > 0) {
+        html += '<span class="nfbt-separator">+</span>';
+      }
+      html += '<div class="nfbt-item" data-index="' + i + '">';
+      html += '<label class="nfbt-checkbox"><input type="checkbox" checked data-index="' + i + '"></label>';
+      html += '<img class="nfbt-img" src="' + escHtml(item.image_url) + '" alt="' + escHtml(item.title) + '" loading="lazy">';
+      html += '<div class="nfbt-item-title">' + escHtml(item.title) + '</div>';
+      html += '<div class="nfbt-item-price">';
+      if (item.compare_price && item.compare_price > item.price) {
+        html += '<span class="nfbt-item-compare">' + formatMoney(item.compare_price) + '</span>';
+      }
+      html += formatMoney(item.price);
+      html += '</div>';
+      html += '</div>';
+    });
+
+    html += '</div>';
+
+    html += '<div class="nfbt-summary">';
+    html += '<div class="nfbt-price-block">';
+    html += '<span class="nfbt-price-label">Bundle price for all items</span>';
+    html += '<div class="nfbt-price-row">';
+    html += '<span class="nfbt-original-price" id="nfbt-original"></span>';
+    html += '<span class="nfbt-bundle-price" id="nfbt-discounted"></span>';
+    html += '<span class="nfbt-savings" id="nfbt-savings"></span>';
+    html += '</div>';
+    html += '</div>';
+    html += '<button class="nfbt-add-btn" id="nfbt-add-btn">Add All to Cart</button>';
+    html += '</div>';
+
+    root.innerHTML = html;
+
+    /* Wire up checkboxes */
+    var checkboxes = root.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(function(cb) {
+      cb.addEventListener('change', function() {
+        var idx = parseInt(this.dataset.index, 10);
+        var card = root.querySelectorAll('.nfbt-item')[idx];
+        if (this.checked) {
+          card.classList.remove('nfbt-unchecked');
+        } else {
+          card.classList.add('nfbt-unchecked');
+        }
+        updateSummary();
+      });
+    });
+
+    /* Add to cart */
+    document.getElementById('nfbt-add-btn').addEventListener('click', addToCart);
+
+    updateSummary();
+  }
+
+  function getCheckedItems() {
+    var checked = [];
+    var checkboxes = root.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(function(cb) {
+      if (cb.checked) {
+        checked.push(items[parseInt(cb.dataset.index, 10)]);
+      }
+    });
+    return checked;
+  }
+
+  function updateSummary() {
+    var checked = getCheckedItems();
+    var originalTotal = 0;
+    checked.forEach(function(item) { originalTotal += item.price; });
+
+    var discountedTotal = originalTotal * (1 - bundleDiscount / 100);
+    var savings = originalTotal - discountedTotal;
+
+    var origEl = document.getElementById('nfbt-original');
+    var discEl = document.getElementById('nfbt-discounted');
+    var saveEl = document.getElementById('nfbt-savings');
+    var addBtn = document.getElementById('nfbt-add-btn');
+
+    if (bundleDiscount > 0 && checked.length > 1) {
+      origEl.textContent = formatMoney(originalTotal);
+      origEl.style.display = '';
+      saveEl.textContent = 'You save ' + formatMoney(savings);
+      saveEl.style.display = '';
+    } else {
+      origEl.style.display = 'none';
+      saveEl.style.display = 'none';
+    }
+
+    discEl.textContent = formatMoney(discountedTotal);
+
+    var count = checked.length;
+    addBtn.disabled = count === 0;
+    addBtn.textContent = count === 0 ? 'Select Items' : 'Add ' + count + ' to Cart';
+  }
+
+  function addToCart() {
+    var checked = getCheckedItems();
+    if (!checked.length) return;
+
+    var btn = document.getElementById('nfbt-add-btn');
+    btn.disabled = true;
+    btn.textContent = 'Adding…';
+
+    var cartItems = checked.map(function(item) {
+      return { id: item.variant_id, quantity: 1 };
+    });
+
+    fetch('/cart/add.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: cartItems }),
+    })
+      .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function() {
+        btn.textContent = 'Added to Cart!';
+        btn.style.background = '#059669';
+        setTimeout(function() {
+          btn.style.background = '';
+          updateSummary();
+        }, 2000);
+      })
+      .catch(function() {
+        btn.textContent = 'Error - Try Again';
+        btn.style.background = '#ef4444';
+        setTimeout(function() {
+          btn.disabled = false;
+          btn.style.background = '';
+          updateSummary();
+        }, 2000);
+      });
+  }
+
+  function formatMoney(amount) {
+    if (window.Shopify && window.Shopify.formatMoney) {
+      return window.Shopify.formatMoney(amount * 100);
+    }
+    return '$' + amount.toFixed(2);
+  }
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Frequently Bought Together",
+  "target": "section",
+  "javascript": null,
+  "stylesheet": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "brand_id",
+      "label": "Brand ID",
+      "info": "Your Nitos brand ID from the dashboard"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#6366f1"
+    },
+    {
+      "type": "text",
+      "id": "api_url",
+      "label": "API URL",
+      "default": "https://nitaiecompro-nine.vercel.app",
+      "info": "Leave as default unless you have a custom domain"
+    }
+  ]
+}
+{% endschema %}

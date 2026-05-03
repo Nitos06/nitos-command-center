@@ -1,0 +1,403 @@
+{% comment %}
+  Nitos Reviews — Review Carousel Block
+  Horizontal scrolling carousel of approved reviews with auto-scroll.
+{% endcomment %}
+
+{% assign brand_id = block.settings.brand_id %}
+{% assign accent_color = block.settings.accent_color | default: "#6366f1" %}
+{% assign api_url = block.settings.api_url | default: "https://nitaiecompro-nine.vercel.app" %}
+{% assign max_reviews = block.settings.max_reviews | default: 8 %}
+{% assign show_photos = block.settings.show_photos %}
+
+<div
+  class="nitos-review-carousel"
+  data-brand="{{ brand_id | escape }}"
+  data-product="{{ product.id }}"
+  data-api="{{ api_url | escape }}"
+  data-accent="{{ accent_color | escape }}"
+  data-max="{{ max_reviews }}"
+  data-photos="{{ show_photos }}"
+  {{ block.shopify_attributes }}
+>
+  <div class="nrc-header">
+    <h3 class="nrc-title">Customer Reviews</h3>
+    <div class="nrc-summary">
+      <span class="nrc-avg-stars" aria-hidden="true"></span>
+      <span class="nrc-avg-text"></span>
+    </div>
+  </div>
+  <div class="nrc-track-wrapper">
+    <button class="nrc-arrow nrc-arrow-left" aria-label="Scroll left" style="display:none;">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="nrc-track"></div>
+    <button class="nrc-arrow nrc-arrow-right" aria-label="Scroll right" style="display:none;">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+  <div class="nrc-empty" style="display:none;">No reviews yet. Be the first to share your experience!</div>
+</div>
+
+<style>
+  .nitos-review-carousel {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 0;
+  }
+  .nrc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding: 0 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .nrc-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0;
+  }
+  .nrc-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .nrc-avg-stars { font-size: 18px; line-height: 1; }
+  .nrc-avg-text { font-size: 15px; color: #6b7280; }
+  .nrc-track-wrapper {
+    position: relative;
+  }
+  .nrc-track {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px 16px 16px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .nrc-track::-webkit-scrollbar { display: none; }
+  .nrc-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #374151;
+    transition: all 0.2s;
+  }
+  .nrc-arrow:hover { background: #f9fafb; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .nrc-arrow-left { left: 4px; }
+  .nrc-arrow-right { right: 4px; }
+
+  .nrc-card {
+    flex: 0 0 300px;
+    background: #fff;
+    border: 1px solid #f0f0f5;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    transition: box-shadow 0.2s, transform 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .nrc-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+  }
+  .nrc-card-stars {
+    display: flex;
+    gap: 2px;
+    font-size: 16px;
+    line-height: 1;
+  }
+  .nrc-card-stars .star-filled { color: #f59e0b; }
+  .nrc-card-stars .star-empty { color: #e0e0e0; }
+  .nrc-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0;
+    line-height: 1.3;
+  }
+  .nrc-card-body {
+    font-size: 14px;
+    color: #4b5563;
+    line-height: 1.5;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .nrc-card-photo {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 8px;
+    background: #f3f4f6;
+  }
+  .nrc-card-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #f3f4f6;
+  }
+  .nrc-card-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: {{ accent_color }};
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .nrc-card-author {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1a1a2e;
+  }
+  .nrc-card-date {
+    font-size: 12px;
+    color: #9ca3af;
+  }
+  .nrc-card-verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: #10b981;
+    font-weight: 500;
+  }
+  .nrc-empty {
+    text-align: center;
+    padding: 48px 16px;
+    color: #9ca3af;
+    font-size: 15px;
+  }
+
+  @media (max-width: 640px) {
+    .nrc-card { flex: 0 0 260px; padding: 20px; }
+    .nrc-title { font-size: 20px; }
+    .nrc-arrow { display: none !important; }
+  }
+</style>
+
+<script>
+(function() {
+  var root = document.currentScript.closest('.shopify-block') ?
+    document.currentScript.closest('.shopify-block').querySelector('.nitos-review-carousel') : null;
+  if (!root) {
+    var all = document.querySelectorAll('.nitos-review-carousel[data-brand]');
+    root = all[all.length - 1];
+  }
+  if (!root) return;
+
+  var brandId    = root.dataset.brand   || '';
+  var productId  = root.dataset.product || '';
+  var apiBase    = root.dataset.api     || '';
+  var maxReviews = parseInt(root.dataset.max || '8', 10);
+  var showPhotos = root.dataset.photos !== 'false';
+
+  if (!brandId || !apiBase) return;
+
+  var track    = root.querySelector('.nrc-track');
+  var leftBtn  = root.querySelector('.nrc-arrow-left');
+  var rightBtn = root.querySelector('.nrc-arrow-right');
+
+  function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function buildStars(rating) {
+    var html = '';
+    for (var i = 1; i <= 5; i++) {
+      html += i <= rating
+        ? '<span class="star-filled">&#9733;</span>'
+        : '<span class="star-empty">&#9733;</span>';
+    }
+    return html;
+  }
+
+  function buildAvgStars(avg) {
+    var html = '';
+    for (var i = 1; i <= 5; i++) {
+      if (avg >= i) html += '<span style="color:#f59e0b;">&#9733;</span>';
+      else if (avg >= i - 0.5) html += '<span style="color:#f59e0b;">&#9734;</span>';
+      else html += '<span style="color:#e0e0e0;">&#9733;</span>';
+    }
+    return html;
+  }
+
+  function formatDate(d) {
+    if (!d) return '';
+    var date = new Date(d);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function initial(name) {
+    return (name || '?').charAt(0).toUpperCase();
+  }
+
+  function renderCard(review) {
+    var card = document.createElement('div');
+    card.className = 'nrc-card';
+    var photoHtml = '';
+    if (showPhotos && review.photo) {
+      photoHtml = '<img class="nrc-card-photo" src="' + escHtml(review.photo) + '" alt="Review photo" loading="lazy" />';
+    }
+    var verifiedHtml = review.verified
+      ? '<span class="nrc-card-verified"><svg width="12" height="12" viewBox="0 0 20 20" fill="#10b981"><path d="M10 0a10 10 0 110 20 10 10 0 010-20zm4.3 7.3a1 1 0 00-1.4-1.4L9 9.8 7.1 7.9a1 1 0 00-1.4 1.4l2.5 2.5a1 1 0 001.4 0l4.7-4.5z"/></svg> Verified</span>'
+      : '';
+
+    card.innerHTML =
+      '<div class="nrc-card-stars">' + buildStars(review.rating || 0) + '</div>' +
+      (review.title ? '<h4 class="nrc-card-title">' + escHtml(review.title) + '</h4>' : '') +
+      '<div class="nrc-card-body">' + escHtml(review.body || review.text || review.content || '') + '</div>' +
+      photoHtml +
+      '<div class="nrc-card-footer">' +
+      '  <div class="nrc-card-avatar">' + initial(review.author || review.name) + '</div>' +
+      '  <div>' +
+      '    <div class="nrc-card-author">' + escHtml(review.author || review.name || 'Anonymous') + '</div>' +
+      '    <div class="nrc-card-date">' + formatDate(review.date || review.created_at) + ' ' + verifiedHtml + '</div>' +
+      '  </div>' +
+      '</div>';
+    return card;
+  }
+
+  /* Arrow navigation */
+  function updateArrows() {
+    if (!track.scrollWidth || track.scrollWidth <= track.clientWidth) {
+      leftBtn.style.display = 'none';
+      rightBtn.style.display = 'none';
+      return;
+    }
+    leftBtn.style.display = track.scrollLeft > 10 ? '' : 'none';
+    rightBtn.style.display = track.scrollLeft < track.scrollWidth - track.clientWidth - 10 ? '' : 'none';
+  }
+
+  leftBtn.addEventListener('click', function() { track.scrollBy({ left: -320, behavior: 'smooth' }); });
+  rightBtn.addEventListener('click', function() { track.scrollBy({ left: 320, behavior: 'smooth' }); });
+  track.addEventListener('scroll', updateArrows);
+
+  /* Auto-scroll */
+  var autoScrollTimer = null;
+  function startAutoScroll() {
+    autoScrollTimer = setInterval(function() {
+      if (track.scrollLeft >= track.scrollWidth - track.clientWidth - 10) {
+        track.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        track.scrollBy({ left: 320, behavior: 'smooth' });
+      }
+    }, 4000);
+  }
+  function stopAutoScroll() {
+    if (autoScrollTimer) { clearInterval(autoScrollTimer); autoScrollTimer = null; }
+  }
+
+  track.addEventListener('mouseenter', stopAutoScroll);
+  track.addEventListener('mouseleave', startAutoScroll);
+  track.addEventListener('touchstart', stopAutoScroll, { passive: true });
+  track.addEventListener('touchend', function() { setTimeout(startAutoScroll, 3000); });
+
+  /* Fetch and render */
+  var url = apiBase + '/api/widget-data/reviews?brand=' + encodeURIComponent(brandId) +
+    (productId ? '&product=' + encodeURIComponent(productId) : '') +
+    '&limit=' + maxReviews;
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var reviews = data.reviews || data.data || [];
+      var avg     = parseFloat(data.averageRating || data.avg_rating || 0);
+      var count   = parseInt(data.reviewCount || data.review_count || data.total || reviews.length || 0, 10);
+
+      if (!reviews.length) {
+        root.querySelector('.nrc-empty').style.display = '';
+        root.querySelector('.nrc-header').style.display = 'none';
+        root.querySelector('.nrc-track-wrapper').style.display = 'none';
+        return;
+      }
+
+      /* Summary */
+      root.querySelector('.nrc-avg-stars').innerHTML = buildAvgStars(avg);
+      root.querySelector('.nrc-avg-text').textContent = avg.toFixed(1) + ' out of 5 (' + count + ' review' + (count !== 1 ? 's' : '') + ')';
+
+      /* Cards */
+      reviews.forEach(function(review) {
+        track.appendChild(renderCard(review));
+      });
+
+      setTimeout(updateArrows, 100);
+      startAutoScroll();
+    })
+    .catch(function() {
+      root.querySelector('.nrc-empty').style.display = '';
+      root.querySelector('.nrc-empty').textContent = 'Unable to load reviews.';
+      root.querySelector('.nrc-header').style.display = 'none';
+      root.querySelector('.nrc-track-wrapper').style.display = 'none';
+    });
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Review Carousel",
+  "target": "section",
+  "javascript": null,
+  "stylesheet": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "brand_id",
+      "label": "Brand ID",
+      "info": "Your Nitos brand ID from the dashboard"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#6366f1"
+    },
+    {
+      "type": "range",
+      "id": "max_reviews",
+      "label": "Max reviews to show",
+      "min": 3,
+      "max": 20,
+      "step": 1,
+      "default": 8
+    },
+    {
+      "type": "checkbox",
+      "id": "show_photos",
+      "label": "Show review photos",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "api_url",
+      "label": "API URL",
+      "default": "https://nitaiecompro-nine.vercel.app",
+      "info": "Leave as default unless you have a custom domain"
+    }
+  ]
+}
+{% endschema %}

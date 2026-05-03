@@ -1,0 +1,155 @@
+{% comment %}
+  Nitos Reviews — Star Badge Block
+  Compact star rating badge for product cards.
+  Fetches average rating + review count and renders gold stars inline.
+{% endcomment %}
+
+{% assign brand_id = block.settings.brand_id %}
+{% assign accent_color = block.settings.accent_color | default: "#6366f1" %}
+{% assign api_url = block.settings.api_url | default: "https://nitaiecompro-nine.vercel.app" %}
+
+<div
+  class="nitos-star-badge"
+  data-brand="{{ brand_id | escape }}"
+  data-product="{{ product.id }}"
+  data-api="{{ api_url | escape }}"
+  data-accent="{{ accent_color | escape }}"
+  {{ block.shopify_attributes }}
+  style="display:none;"
+>
+  <div class="nsb-stars" aria-hidden="true"></div>
+  <span class="nsb-rating"></span>
+  <span class="nsb-count"></span>
+</div>
+
+<style>
+  .nitos-star-badge {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1;
+    padding: 6px 0;
+    cursor: default;
+  }
+  .nitos-star-badge[style*="display:none"] {
+    display: none !important;
+  }
+  .nsb-stars {
+    display: inline-flex;
+    gap: 1px;
+    line-height: 1;
+  }
+  .nsb-star {
+    width: 16px;
+    height: 16px;
+    position: relative;
+    display: inline-block;
+  }
+  .nsb-star svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+  }
+  .nsb-star-bg { fill: #e0e0e0; }
+  .nsb-star-fg { fill: #f59e0b; }
+  .nsb-rating {
+    font-weight: 600;
+    color: #1a1a2e;
+    font-size: 14px;
+  }
+  .nsb-count {
+    color: #6b7280;
+    font-size: 13px;
+  }
+  .nsb-count a {
+    color: #6b7280;
+    text-decoration: none;
+  }
+  .nsb-count a:hover {
+    color: {{ accent_color }};
+    text-decoration: underline;
+  }
+</style>
+
+<script>
+(function() {
+  var badge = document.currentScript.closest('.shopify-block') ?
+    document.currentScript.closest('.shopify-block').querySelector('.nitos-star-badge') :
+    document.currentScript.previousElementSibling.previousElementSibling;
+
+  /* Walk up to find .nitos-star-badge — fallback for various DOM shapes */
+  if (!badge || !badge.classList.contains('nitos-star-badge')) {
+    var all = document.querySelectorAll('.nitos-star-badge[data-product]');
+    badge = all[all.length - 1];
+  }
+  if (!badge) return;
+
+  var brandId   = badge.dataset.brand   || '';
+  var productId = badge.dataset.product || '';
+  var apiBase   = badge.dataset.api     || '';
+
+  if (!brandId || !productId || !apiBase) return;
+
+  function buildStars(rating) {
+    var html = '';
+    for (var i = 1; i <= 5; i++) {
+      var pct = Math.min(Math.max((rating - (i - 1)) * 100, 0), 100);
+      var id = 'nsb-clip-' + productId + '-' + i;
+      html += '<span class="nsb-star">' +
+        '<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">' +
+        '<defs><clipPath id="' + id + '"><rect x="0" y="0" width="' + (pct * 20 / 100) + '" height="20"/></clipPath></defs>' +
+        '<polygon class="nsb-star-bg" points="10,1 12.6,7.4 19.5,7.6 14,12 15.8,18.8 10,15 4.2,18.8 6,12 0.5,7.6 7.4,7.4"/>' +
+        '<polygon class="nsb-star-fg" points="10,1 12.6,7.4 19.5,7.6 14,12 15.8,18.8 10,15 4.2,18.8 6,12 0.5,7.6 7.4,7.4" clip-path="url(#' + id + ')"/>' +
+        '</svg></span>';
+    }
+    return html;
+  }
+
+  fetch(apiBase + '/api/widget-data/reviews?brand=' + encodeURIComponent(brandId) + '&product=' + encodeURIComponent(productId))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var avg   = parseFloat(data.averageRating || data.avg_rating || 0);
+      var count = parseInt(data.reviewCount || data.review_count || data.total || 0, 10);
+
+      if (!count || count === 0) return; /* Hide if no reviews */
+
+      badge.querySelector('.nsb-stars').innerHTML = buildStars(avg);
+      badge.querySelector('.nsb-rating').textContent = avg.toFixed(1);
+      badge.querySelector('.nsb-count').innerHTML = '(' + count + ' review' + (count !== 1 ? 's' : '') + ')';
+      badge.style.display = '';
+    })
+    .catch(function() { /* Silently hide on error */ });
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Star Rating Badge",
+  "target": "section",
+  "javascript": null,
+  "stylesheet": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "brand_id",
+      "label": "Brand ID",
+      "info": "Your Nitos brand ID from the dashboard"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#6366f1"
+    },
+    {
+      "type": "text",
+      "id": "api_url",
+      "label": "API URL",
+      "default": "https://nitaiecompro-nine.vercel.app",
+      "info": "Leave as default unless you have a custom domain"
+    }
+  ]
+}
+{% endschema %}

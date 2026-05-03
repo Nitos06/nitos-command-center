@@ -1,5 +1,5 @@
-import SuppliersClient from "./suppliers-client";
+import { redirect } from "next/navigation";
 
 export default function SuppliersPage() {
-  return <SuppliersClient />;
+  redirect("/apps/ecom-builder");
 }

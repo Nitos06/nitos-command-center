@@ -58,20 +58,19 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "Apps",
     items: [
-      { href: "/reviews",       label: "Reviews",       icon: Star       },
-      { href: "/post-purchase", label: "Post-Purchase", icon: Zap        },
-      { href: "/quiz",          label: "Quiz",          icon: HelpCircle },
-      { href: "/affiliates",    label: "Affiliates",    icon: Users      },
-      { href: "/bundles",       label: "Bundles",       icon: Package    },
-      { href: "/gift",          label: "Gift",          icon: Gift       },
-      { href: "/bulk-editor",   label: "Bulk Editor",   icon: PenLine    },
-      { href: "/suppliers",     label: "Suppliers",     icon: Truck      },
+      { href: "/apps/reviews",       label: "Reviews",      icon: Star       },
+      { href: "/apps/quiz",          label: "Quiz",         icon: HelpCircle },
+      { href: "/apps/bundles",       label: "Bundles",      icon: Package    },
+      { href: "/apps/affiliates",    label: "Affiliates",   icon: Users      },
+      { href: "/apps/gift",          label: "Gift",         icon: Gift       },
+      { href: "/apps/bulk-editor",   label: "Bulk Editor",  icon: PenLine    },
+      { href: "/apps/ecom-builder",  label: "Ecom Builder", icon: Hammer     },
+      { href: "/post-purchase",      label: "Post-Purchase", icon: Zap       },
     ],
   },
   {
     label: "Build",
     items: [
-      { href: "/ecom-builder", label: "Ecom Builder", icon: Hammer   },
       { href: "/agents",       label: "Agents",       icon: Bot      },
       { href: "/setup",        label: "Setup & Docs", icon: BookOpen },
     ],

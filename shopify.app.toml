@@ -4,7 +4,7 @@ application_url = "https://nitaiecompro-nine.vercel.app"
 embedded = true
 
 [access_scopes]
-scopes = "read_orders,write_orders,read_products,write_checkouts,read_customers"
+scopes = "read_orders,write_orders,read_products,write_products,write_checkouts,read_customers,write_customers,read_discounts,write_discounts,read_themes"
 
 [auth]
 redirect_urls = [
@@ -30,3 +30,18 @@ handle = "post-purchase-upsell"
 type = "theme"
 name = "AI Chat Widget"
 handle = "chatbot-widget"
+
+[[extensions]]
+type = "theme"
+name = "Reviews Widget"
+handle = "reviews-widget"
+
+[[extensions]]
+type = "theme"
+name = "Quiz Widget"
+handle = "quiz-widget"
+
+[[extensions]]
+type = "theme"
+name = "Bundle Widget"
+handle = "bundle-widget"

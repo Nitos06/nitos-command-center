@@ -1,0 +1,851 @@
+{% comment %}
+  Nitos Product Quiz Widget — Theme App Extension Block
+  Merchants add this block from Online Store → Themes → Customize → Add section/block → Apps → Quiz Widget
+  Supports inline embed or popup modal modes.
+{% endcomment %}
+
+{% assign brand_id = block.settings.brand_id %}
+{% assign quiz_id = block.settings.quiz_id %}
+{% assign accent_color = block.settings.accent_color | default: "#6366f1" %}
+{% assign auto_open_delay = block.settings.auto_open_delay | default: 0 %}
+{% assign api_url = block.settings.api_url | default: "https://nitaiecompro-nine.vercel.app" %}
+{% assign position = block.settings.position | default: "inline" %}
+
+<div
+  id="nitos-quiz-root"
+  data-brand="{{ brand_id | escape }}"
+  data-quiz="{{ quiz_id | escape }}"
+  data-color="{{ accent_color | escape }}"
+  data-delay="{{ auto_open_delay }}"
+  data-api="{{ api_url | escape }}"
+  data-position="{{ position }}"
+  {{ block.shopify_attributes }}
+></div>
+
+<style>
+  /* ── Reset & base ──────────────────────────────────────────────── */
+  .nq-container *, .nq-overlay * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  .nq-container, .nq-overlay {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 15px;
+    color: #1a1a2e;
+    line-height: 1.5;
+  }
+
+  /* ── Inline container ──────────────────────────────────────────── */
+  .nq-inline {
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+
+  /* ── Popup trigger button ──────────────────────────────────────── */
+  .nq-trigger {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 2147483646;
+    background: {{ accent_color }};
+    color: #fff;
+    border: none;
+    border-radius: 28px;
+    padding: 12px 22px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.22);
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-family: inherit;
+  }
+  .nq-trigger:hover {
+    transform: scale(1.04);
+    box-shadow: 0 6px 28px rgba(0,0,0,0.28);
+  }
+  .nq-trigger svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+  /* ── Overlay / modal ───────────────────────────────────────────── */
+  .nq-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483647;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .nq-overlay.nq-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .nq-modal {
+    background: #fff;
+    border-radius: 18px;
+    width: 100%;
+    max-width: 560px;
+    max-height: calc(100svh - 32px);
+    overflow-y: auto;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.18);
+    position: relative;
+    transform: translateY(16px) scale(0.97);
+    transition: transform 0.25s;
+  }
+  .nq-overlay.nq-open .nq-modal {
+    transform: translateY(0) scale(1);
+  }
+  .nq-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(0,0,0,0.06);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 18px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    z-index: 2;
+  }
+  .nq-modal-close:hover { background: rgba(0,0,0,0.12); }
+
+  /* ── Inner quiz frame (shared by inline & popup) ───────────────── */
+  .nq-inner { padding: 28px 24px 24px; }
+
+  /* ── Header / title ────────────────────────────────────────────── */
+  .nq-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #1a1a2e;
+  }
+  .nq-subtitle {
+    font-size: 14px;
+    color: #71717a;
+    margin-bottom: 20px;
+  }
+
+  /* ── Progress bar ──────────────────────────────────────────────── */
+  .nq-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .nq-progress-track {
+    flex: 1;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .nq-progress-bar {
+    height: 100%;
+    background: {{ accent_color }};
+    border-radius: 3px;
+    transition: width 0.35s ease;
+    width: 0%;
+  }
+  .nq-progress-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #71717a;
+    white-space: nowrap;
+  }
+
+  /* ── Question step ─────────────────────────────────────────────── */
+  .nq-step {
+    animation: nqFadeIn 0.3s ease;
+  }
+  @keyframes nqFadeIn {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .nq-question {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #1a1a2e;
+  }
+
+  /* ── Option cards ──────────────────────────────────────────────── */
+  .nq-options { display: flex; flex-direction: column; gap: 10px; }
+  .nq-option {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    background: #fff;
+    font-size: 15px;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    font-family: inherit;
+    color: #1a1a2e;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+  .nq-option:hover {
+    border-color: {{ accent_color }};
+    background: {{ accent_color }}0a;
+  }
+  .nq-option.nq-selected {
+    border-color: {{ accent_color }};
+    background: {{ accent_color }}12;
+  }
+  .nq-option-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #d1d5db;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .nq-selected .nq-option-indicator {
+    border-color: {{ accent_color }};
+    background: {{ accent_color }};
+  }
+  .nq-option-indicator::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fff;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .nq-selected .nq-option-indicator::after { opacity: 1; }
+  .nq-option-label { flex: 1; }
+
+  /* ── Navigation buttons ────────────────────────────────────────── */
+  .nq-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    gap: 12px;
+  }
+  .nq-btn {
+    border: none;
+    border-radius: 10px;
+    padding: 11px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    font-family: inherit;
+  }
+  .nq-btn:hover { opacity: 0.88; }
+  .nq-btn:active { transform: scale(0.98); }
+  .nq-btn-primary {
+    background: {{ accent_color }};
+    color: #fff;
+  }
+  .nq-btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .nq-btn-back {
+    background: transparent;
+    color: #71717a;
+    padding-left: 0;
+  }
+  .nq-btn-back:hover { color: #1a1a2e; }
+
+  /* ── Email gate ────────────────────────────────────────────────── */
+  .nq-gate {
+    animation: nqFadeIn 0.3s ease;
+  }
+  .nq-gate-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .nq-gate-sub {
+    font-size: 14px;
+    color: #71717a;
+    margin-bottom: 20px;
+  }
+  .nq-field {
+    margin-bottom: 14px;
+  }
+  .nq-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 5px;
+  }
+  .nq-field input {
+    width: 100%;
+    border: 1.5px solid #e0e0ee;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 15px;
+    font-family: inherit;
+    color: #1a1a2e;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .nq-field input:focus { border-color: {{ accent_color }}; }
+  .nq-field input::placeholder { color: #b0b0c0; }
+
+  /* ── Results ───────────────────────────────────────────────────── */
+  .nq-results {
+    animation: nqFadeIn 0.3s ease;
+  }
+  .nq-results-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .nq-results-sub {
+    font-size: 14px;
+    color: #71717a;
+    margin-bottom: 20px;
+  }
+  .nq-products {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+  }
+  .nq-product {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    transition: box-shadow 0.15s, transform 0.1s;
+  }
+  .nq-product:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+  }
+  .nq-product-img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+    background: #f5f5f5;
+  }
+  .nq-product-info { padding: 10px 12px; }
+  .nq-product-name {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .nq-product-price {
+    font-size: 14px;
+    font-weight: 700;
+    color: {{ accent_color }};
+  }
+  .nq-product-link {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: {{ accent_color }};
+    text-decoration: none;
+  }
+  .nq-product-link:hover { text-decoration: underline; }
+
+  /* ── Loading spinner ───────────────────────────────────────────── */
+  .nq-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 0;
+    gap: 14px;
+  }
+  .nq-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #e5e7eb;
+    border-top-color: {{ accent_color }};
+    border-radius: 50%;
+    animation: nqSpin 0.7s linear infinite;
+  }
+  @keyframes nqSpin { to { transform: rotate(360deg); } }
+  .nq-loading-text {
+    font-size: 14px;
+    color: #71717a;
+  }
+
+  /* ── Error state ───────────────────────────────────────────────── */
+  .nq-error {
+    text-align: center;
+    padding: 32px 0;
+    color: #71717a;
+    animation: nqFadeIn 0.3s ease;
+  }
+  .nq-error-icon { font-size: 32px; margin-bottom: 8px; }
+  .nq-error-msg { font-size: 14px; margin-bottom: 16px; }
+
+  /* ── Powered by ────────────────────────────────────────────────── */
+  .nq-powered {
+    text-align: center;
+    font-size: 10px;
+    color: #c8c8d8;
+    padding: 12px 0 16px;
+  }
+
+  /* ── Mobile ────────────────────────────────────────────────────── */
+  @media (max-width: 480px) {
+    .nq-modal {
+      max-width: 100%;
+      max-height: 100svh;
+      border-radius: 0;
+    }
+    .nq-trigger { bottom: 16px; right: 16px; }
+    .nq-products { grid-template-columns: repeat(2, 1fr); }
+    .nq-inner { padding: 20px 16px 16px; }
+  }
+</style>
+
+<script>
+(function() {
+  var root      = document.getElementById('nitos-quiz-root');
+  var brandId   = root.dataset.brand    || '';
+  var quizId    = root.dataset.quiz     || '';
+  var color     = root.dataset.color    || '#6366f1';
+  var autoDelay = parseInt(root.dataset.delay || '0', 10);
+  var apiBase   = root.dataset.api      || '';
+  var mode      = root.dataset.position || 'inline';
+
+  var quizData     = null;
+  var currentStep  = 0;
+  var answers      = {};
+  var results      = null;
+  var containerEl  = null;
+  var overlayEl    = null;
+  var triggerEl    = null;
+  var quizOpened   = false;
+
+  var QUIZ_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
+
+  /* ── Helpers ────────────────────────────────────────────────────── */
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s || '';
+    return d.innerHTML;
+  }
+
+  /* ── Build DOM ─────────────────────────────────────────────────── */
+  if (mode === 'popup') {
+    triggerEl = document.createElement('button');
+    triggerEl.className = 'nq-trigger';
+    triggerEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Take the Quiz';
+    document.body.appendChild(triggerEl);
+
+    overlayEl = document.createElement('div');
+    overlayEl.className = 'nq-overlay';
+    overlayEl.innerHTML = '<div class="nq-modal"><button class="nq-modal-close" aria-label="Close">&times;</button><div class="nq-container"><div class="nq-inner"></div><div class="nq-powered">Powered by Nitos AI</div></div></div>';
+    document.body.appendChild(overlayEl);
+
+    containerEl = overlayEl.querySelector('.nq-inner');
+
+    triggerEl.addEventListener('click', openQuiz);
+    overlayEl.querySelector('.nq-modal-close').addEventListener('click', closeQuiz);
+    overlayEl.addEventListener('click', function(e) {
+      if (e.target === overlayEl) closeQuiz();
+    });
+
+    if (autoDelay > 0) {
+      setTimeout(function() {
+        if (!quizOpened) openQuiz();
+      }, autoDelay * 1000);
+    }
+  } else {
+    /* inline */
+    var wrapper = document.createElement('div');
+    wrapper.className = 'nq-inline nq-container';
+    wrapper.innerHTML = '<div class="nq-inner"></div><div class="nq-powered">Powered by Nitos AI</div>';
+    root.appendChild(wrapper);
+    containerEl = wrapper.querySelector('.nq-inner');
+    loadQuiz();
+  }
+
+  /* ── Open / close popup ────────────────────────────────────────── */
+  function openQuiz() {
+    quizOpened = true;
+    overlayEl.classList.add('nq-open');
+    document.body.style.overflow = 'hidden';
+    if (!quizData) loadQuiz();
+  }
+
+  function closeQuiz() {
+    overlayEl.classList.remove('nq-open');
+    document.body.style.overflow = '';
+  }
+
+  /* ── Load quiz data ────────────────────────────────────────────── */
+  function loadQuiz() {
+    if (!quizId || !brandId) {
+      renderError('Quiz not configured. Please set a Brand ID and Quiz ID in the block settings.');
+      return;
+    }
+    renderLoading();
+    fetch(apiBase + '/api/quiz/' + encodeURIComponent(quizId) + '?brand=' + encodeURIComponent(brandId))
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(data) {
+        quizData = data;
+        currentStep = 0;
+        answers = {};
+        results = null;
+        renderStep();
+      })
+      .catch(function(err) {
+        renderError('Could not load quiz. Please try again later.');
+      });
+  }
+
+  /* ── Render: loading ───────────────────────────────────────────── */
+  function renderLoading() {
+    containerEl.innerHTML = '<div class="nq-loading"><div class="nq-spinner"></div><div class="nq-loading-text">Loading quiz...</div></div>';
+  }
+
+  /* ── Render: error ─────────────────────────────────────────────── */
+  function renderError(msg) {
+    containerEl.innerHTML = '<div class="nq-error"><div class="nq-error-icon">&#x26A0;</div><div class="nq-error-msg">' + esc(msg) + '</div><button class="nq-btn nq-btn-primary" id="nq-retry">Try Again</button></div>';
+    var retryBtn = document.getElementById('nq-retry');
+    if (retryBtn) retryBtn.addEventListener('click', loadQuiz);
+  }
+
+  /* ── Render: question step ─────────────────────────────────────── */
+  function renderStep() {
+    if (!quizData || !quizData.questions || !quizData.questions.length) {
+      renderError('This quiz has no questions.');
+      return;
+    }
+
+    var questions = quizData.questions;
+    var total = questions.length;
+    var q = questions[currentStep];
+    var progress = Math.round(((currentStep) / (total + 1)) * 100);
+
+    var html = '';
+    html += '<div class="nq-step">';
+
+    /* Title (first step only) */
+    if (currentStep === 0 && quizData.title) {
+      html += '<div class="nq-title">' + esc(quizData.title) + '</div>';
+      if (quizData.description) {
+        html += '<div class="nq-subtitle">' + esc(quizData.description) + '</div>';
+      }
+    }
+
+    /* Progress */
+    html += '<div class="nq-progress-wrap">';
+    html += '  <div class="nq-progress-track"><div class="nq-progress-bar" style="width:' + progress + '%"></div></div>';
+    html += '  <div class="nq-progress-label">' + (currentStep + 1) + ' / ' + total + '</div>';
+    html += '</div>';
+
+    /* Question */
+    html += '<div class="nq-question">' + esc(q.question || q.title || q.text) + '</div>';
+
+    /* Options */
+    var options = q.options || q.answers || q.choices || [];
+    html += '<div class="nq-options">';
+    for (var i = 0; i < options.length; i++) {
+      var opt = typeof options[i] === 'string' ? options[i] : (options[i].label || options[i].text || options[i].value || '');
+      var optVal = typeof options[i] === 'string' ? options[i] : (options[i].value || options[i].label || options[i].text || '');
+      var sel = answers[currentStep] === optVal ? ' nq-selected' : '';
+      html += '<button class="nq-option' + sel + '" data-val="' + esc(optVal) + '">';
+      html += '  <span class="nq-option-indicator"></span>';
+      html += '  <span class="nq-option-label">' + esc(opt) + '</span>';
+      html += '</button>';
+    }
+    html += '</div>';
+
+    /* Nav */
+    html += '<div class="nq-nav">';
+    if (currentStep > 0) {
+      html += '<button class="nq-btn nq-btn-back" id="nq-back">&larr; Back</button>';
+    } else {
+      html += '<span></span>';
+    }
+    html += '<button class="nq-btn nq-btn-primary" id="nq-next"' + (!answers[currentStep] ? ' disabled' : '') + '>';
+    html += currentStep < total - 1 ? 'Next &rarr;' : 'See Results &rarr;';
+    html += '</button>';
+    html += '</div>';
+
+    html += '</div>';
+    containerEl.innerHTML = html;
+
+    /* Bind option clicks */
+    var optBtns = containerEl.querySelectorAll('.nq-option');
+    for (var j = 0; j < optBtns.length; j++) {
+      optBtns[j].addEventListener('click', function() {
+        answers[currentStep] = this.dataset.val;
+        /* Update selection UI */
+        var all = containerEl.querySelectorAll('.nq-option');
+        for (var k = 0; k < all.length; k++) all[k].classList.remove('nq-selected');
+        this.classList.add('nq-selected');
+        var nextBtn = document.getElementById('nq-next');
+        if (nextBtn) nextBtn.disabled = false;
+      });
+    }
+
+    /* Back button */
+    var backBtn = document.getElementById('nq-back');
+    if (backBtn) {
+      backBtn.addEventListener('click', function() {
+        if (currentStep > 0) { currentStep--; renderStep(); }
+      });
+    }
+
+    /* Next button */
+    var nextBtn = document.getElementById('nq-next');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', function() {
+        if (!answers[currentStep]) return;
+        if (currentStep < questions.length - 1) {
+          currentStep++;
+          renderStep();
+        } else {
+          renderEmailGate();
+        }
+      });
+    }
+  }
+
+  /* ── Render: email gate ────────────────────────────────────────── */
+  function renderEmailGate() {
+    var total = quizData.questions.length;
+    var progress = Math.round((total / (total + 1)) * 100);
+
+    var html = '';
+    html += '<div class="nq-gate">';
+    html += '<div class="nq-gate-title">Almost there!</div>';
+    html += '<div class="nq-gate-sub">Enter your details to see your personalized recommendations.</div>';
+
+    html += '<div class="nq-progress-wrap">';
+    html += '  <div class="nq-progress-track"><div class="nq-progress-bar" style="width:' + progress + '%"></div></div>';
+    html += '  <div class="nq-progress-label">Results</div>';
+    html += '</div>';
+
+    html += '<div class="nq-field"><label for="nq-name">Name</label>';
+    html += '<input type="text" id="nq-name" placeholder="Your name" autocomplete="given-name"></div>';
+    html += '<div class="nq-field"><label for="nq-email">Email</label>';
+    html += '<input type="email" id="nq-email" placeholder="you@example.com" autocomplete="email"></div>';
+
+    html += '<div class="nq-nav">';
+    html += '<button class="nq-btn nq-btn-back" id="nq-back">&larr; Back</button>';
+    html += '<button class="nq-btn nq-btn-primary" id="nq-submit" disabled>Get My Results &rarr;</button>';
+    html += '</div>';
+    html += '</div>';
+
+    containerEl.innerHTML = html;
+
+    var nameIn   = document.getElementById('nq-name');
+    var emailIn  = document.getElementById('nq-email');
+    var submitBtn = document.getElementById('nq-submit');
+    var backBtn  = document.getElementById('nq-back');
+
+    function validateGate() {
+      submitBtn.disabled = !(nameIn.value.trim() && emailIn.value.trim() && emailIn.value.indexOf('@') > 0);
+    }
+    nameIn.addEventListener('input', validateGate);
+    emailIn.addEventListener('input', validateGate);
+
+    backBtn.addEventListener('click', function() {
+      renderStep();
+    });
+
+    submitBtn.addEventListener('click', function() {
+      submitQuiz(nameIn.value.trim(), emailIn.value.trim());
+    });
+
+    /* Enter key submits */
+    emailIn.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !submitBtn.disabled) submitQuiz(nameIn.value.trim(), emailIn.value.trim());
+    });
+
+    setTimeout(function() { nameIn.focus(); }, 100);
+  }
+
+  /* ── Submit quiz ───────────────────────────────────────────────── */
+  function submitQuiz(name, email) {
+    renderLoading();
+
+    /* Build answers array */
+    var ansArr = [];
+    var questions = quizData.questions;
+    for (var i = 0; i < questions.length; i++) {
+      ansArr.push({
+        questionId: questions[i].id || String(i),
+        question: questions[i].question || questions[i].title || questions[i].text || '',
+        answer: answers[i] || ''
+      });
+    }
+
+    fetch(apiBase + '/api/quiz/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        quizId: quizId,
+        brandId: brandId,
+        email: email,
+        name: name,
+        answers: ansArr
+      })
+    })
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(data) {
+        results = data;
+        renderResults(data);
+      })
+      .catch(function(err) {
+        renderError('Something went wrong submitting your answers. Please try again.');
+      });
+  }
+
+  /* ── Render: results ───────────────────────────────────────────── */
+  function renderResults(data) {
+    var products = data.products || data.recommendations || data.results || [];
+    var headline = data.headline || data.title || 'Your Recommendations';
+    var subtitle = data.subtitle || data.description || 'Based on your answers, we think you\'ll love these:';
+
+    var html = '';
+    html += '<div class="nq-results">';
+
+    html += '<div class="nq-progress-wrap">';
+    html += '  <div class="nq-progress-track"><div class="nq-progress-bar" style="width:100%"></div></div>';
+    html += '  <div class="nq-progress-label">Done!</div>';
+    html += '</div>';
+
+    html += '<div class="nq-results-title">' + esc(headline) + '</div>';
+    html += '<div class="nq-results-sub">' + esc(subtitle) + '</div>';
+
+    if (products.length > 0) {
+      html += '<div class="nq-products">';
+      for (var i = 0; i < products.length; i++) {
+        var p = products[i];
+        var name = p.title || p.name || 'Product';
+        var price = p.price ? p.price : '';
+        var img = p.image || p.imageUrl || p.featured_image || '';
+        var url = p.url || p.handle ? ('/products/' + (p.handle || '')) : '#';
+
+        html += '<div class="nq-product">';
+        if (img) {
+          html += '<img class="nq-product-img" src="' + esc(img) + '" alt="' + esc(name) + '" loading="lazy">';
+        }
+        html += '<div class="nq-product-info">';
+        html += '<div class="nq-product-name">' + esc(name) + '</div>';
+        if (price) {
+          html += '<div class="nq-product-price">' + esc(price) + '</div>';
+        }
+        html += '<a href="' + esc(url) + '" class="nq-product-link">View Product &rarr;</a>';
+        html += '</div></div>';
+      }
+      html += '</div>';
+    } else {
+      html += '<div class="nq-error-msg">No products matched your preferences. Try again with different answers!</div>';
+    }
+
+    html += '<div class="nq-nav" style="justify-content:center">';
+    html += '<button class="nq-btn nq-btn-primary" id="nq-restart">Retake Quiz</button>';
+    html += '</div>';
+    html += '</div>';
+
+    containerEl.innerHTML = html;
+
+    document.getElementById('nq-restart').addEventListener('click', function() {
+      currentStep = 0;
+      answers = {};
+      results = null;
+      renderStep();
+    });
+  }
+
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Product Quiz",
+  "target": "body",
+  "javascript": null,
+  "stylesheet": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "brand_id",
+      "label": "Brand ID",
+      "info": "Your Nitos brand ID from the dashboard"
+    },
+    {
+      "type": "text",
+      "id": "quiz_id",
+      "label": "Quiz ID",
+      "info": "The quiz ID from the Quiz Builder"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#6366f1"
+    },
+    {
+      "type": "range",
+      "id": "auto_open_delay",
+      "label": "Auto-open delay (seconds)",
+      "info": "Popup mode only. 0 = no auto-open.",
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "default": 0,
+      "unit": "s"
+    },
+    {
+      "type": "text",
+      "id": "api_url",
+      "label": "API URL",
+      "default": "https://nitaiecompro-nine.vercel.app",
+      "info": "Leave as default unless you have a custom domain"
+    },
+    {
+      "type": "select",
+      "id": "position",
+      "label": "Display mode",
+      "default": "inline",
+      "options": [
+        { "value": "inline", "label": "Inline (embed on page)" },
+        { "value": "popup",  "label": "Popup (floating button + modal)" }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,532 @@
+{% comment %}
+  Nitos Reviews — Review Submission Form Block
+  Lets customers submit reviews with star rating, text, and optional photo.
+{% endcomment %}
+
+{% assign brand_id = block.settings.brand_id %}
+{% assign accent_color = block.settings.accent_color | default: "#6366f1" %}
+{% assign api_url = block.settings.api_url | default: "https://nitaiecompro-nine.vercel.app" %}
+{% assign form_product_id = block.settings.product_id %}
+
+<div
+  class="nitos-review-form"
+  data-brand="{{ brand_id | escape }}"
+  data-product="{{ form_product_id | default: product.id }}"
+  data-api="{{ api_url | escape }}"
+  data-accent="{{ accent_color | escape }}"
+  {{ block.shopify_attributes }}
+>
+  <!-- Form State -->
+  <div class="nrf-form-wrapper">
+    <h3 class="nrf-title">Write a Review</h3>
+    <p class="nrf-subtitle">Share your experience with this product</p>
+
+    <form class="nrf-form" novalidate>
+      <!-- Star Rating -->
+      <div class="nrf-field">
+        <label class="nrf-label">Rating <span class="nrf-required">*</span></label>
+        <div class="nrf-star-input" role="radiogroup" aria-label="Rating">
+          <button type="button" class="nrf-star" data-value="1" aria-label="1 star">&#9733;</button>
+          <button type="button" class="nrf-star" data-value="2" aria-label="2 stars">&#9733;</button>
+          <button type="button" class="nrf-star" data-value="3" aria-label="3 stars">&#9733;</button>
+          <button type="button" class="nrf-star" data-value="4" aria-label="4 stars">&#9733;</button>
+          <button type="button" class="nrf-star" data-value="5" aria-label="5 stars">&#9733;</button>
+        </div>
+        <div class="nrf-rating-text"></div>
+        <div class="nrf-error nrf-error-rating" style="display:none;">Please select a rating</div>
+      </div>
+
+      <!-- Name -->
+      <div class="nrf-field">
+        <label class="nrf-label" for="nrf-name-{{ block.id }}">Name <span class="nrf-required">*</span></label>
+        <input type="text" id="nrf-name-{{ block.id }}" class="nrf-input nrf-input-name" placeholder="Your name" required />
+        <div class="nrf-error nrf-error-name" style="display:none;">Please enter your name</div>
+      </div>
+
+      <!-- Email -->
+      <div class="nrf-field">
+        <label class="nrf-label" for="nrf-email-{{ block.id }}">Email <span class="nrf-required">*</span></label>
+        <input type="email" id="nrf-email-{{ block.id }}" class="nrf-input nrf-input-email" placeholder="your@email.com" required />
+        <div class="nrf-hint">Your email won't be published</div>
+        <div class="nrf-error nrf-error-email" style="display:none;">Please enter a valid email</div>
+      </div>
+
+      <!-- Review Title -->
+      <div class="nrf-field">
+        <label class="nrf-label" for="nrf-title-{{ block.id }}">Review Title <span class="nrf-required">*</span></label>
+        <input type="text" id="nrf-title-{{ block.id }}" class="nrf-input nrf-input-title" placeholder="Summarize your experience" required />
+        <div class="nrf-error nrf-error-title" style="display:none;">Please enter a review title</div>
+      </div>
+
+      <!-- Review Body -->
+      <div class="nrf-field">
+        <label class="nrf-label" for="nrf-body-{{ block.id }}">Review <span class="nrf-required">*</span></label>
+        <textarea id="nrf-body-{{ block.id }}" class="nrf-input nrf-textarea nrf-input-body" rows="4" placeholder="Tell others about your experience with this product..." required></textarea>
+        <div class="nrf-error nrf-error-body" style="display:none;">Please write your review</div>
+      </div>
+
+      <!-- Photo Upload -->
+      <div class="nrf-field">
+        <label class="nrf-label">Photo (optional)</label>
+        <div class="nrf-upload-area">
+          <input type="file" class="nrf-file-input" accept="image/*" />
+          <div class="nrf-upload-placeholder">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <span>Click to upload a photo</span>
+          </div>
+          <div class="nrf-upload-preview" style="display:none;">
+            <img class="nrf-preview-img" alt="Preview" />
+            <button type="button" class="nrf-remove-photo" aria-label="Remove photo">&times;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit" class="nrf-submit">
+        <span class="nrf-submit-text">Submit Review</span>
+        <span class="nrf-submit-loading" style="display:none;">
+          <svg width="20" height="20" viewBox="0 0 24 24" class="nrf-spinner"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31.4 31.4" stroke-linecap="round"/></svg>
+          Submitting...
+        </span>
+      </button>
+    </form>
+  </div>
+
+  <!-- Success State -->
+  <div class="nrf-success" style="display:none;">
+    <div class="nrf-success-icon">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <circle cx="24" cy="24" r="24" fill="{{ accent_color }}" opacity="0.1"/>
+        <path d="M16 24l6 6 10-12" stroke="{{ accent_color }}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+    </div>
+    <h3 class="nrf-success-title">Thank you for your review!</h3>
+    <p class="nrf-success-text">Your review has been submitted and will appear once approved.</p>
+    <button type="button" class="nrf-write-another">Write Another Review</button>
+  </div>
+</div>
+
+<style>
+  .nitos-review-form {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 40px 16px;
+  }
+  .nrf-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0 0 4px;
+  }
+  .nrf-subtitle {
+    font-size: 15px;
+    color: #6b7280;
+    margin: 0 0 28px;
+  }
+  .nrf-field {
+    margin-bottom: 20px;
+  }
+  .nrf-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+  }
+  .nrf-required { color: #ef4444; }
+  .nrf-hint {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 4px;
+  }
+  .nrf-input {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 15px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #1a1a2e;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+  .nrf-input:focus {
+    border-color: {{ accent_color }};
+    box-shadow: 0 0 0 3px {{ accent_color }}22;
+  }
+  .nrf-input.nrf-input-error {
+    border-color: #ef4444;
+  }
+  .nrf-input.nrf-input-error:focus {
+    box-shadow: 0 0 0 3px #ef444422;
+  }
+  .nrf-textarea {
+    resize: vertical;
+    min-height: 100px;
+  }
+  .nrf-error {
+    font-size: 13px;
+    color: #ef4444;
+    margin-top: 4px;
+  }
+
+  /* Star input */
+  .nrf-star-input {
+    display: flex;
+    gap: 4px;
+  }
+  .nrf-star {
+    background: none;
+    border: none;
+    font-size: 32px;
+    color: #e0e0e0;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.15s, transform 0.15s;
+  }
+  .nrf-star:hover,
+  .nrf-star.nrf-star-hover { color: #fbbf24; transform: scale(1.1); }
+  .nrf-star.nrf-star-active { color: #f59e0b; }
+  .nrf-rating-text {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 4px;
+    min-height: 18px;
+  }
+
+  /* Photo upload */
+  .nrf-upload-area {
+    position: relative;
+    border: 2px dashed #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .nrf-upload-area:hover { border-color: #d1d5db; }
+  .nrf-file-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .nrf-upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 28px 16px;
+    color: #9ca3af;
+    font-size: 14px;
+  }
+  .nrf-upload-preview {
+    position: relative;
+    padding: 12px;
+  }
+  .nrf-preview-img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 6px;
+    display: block;
+  }
+  .nrf-remove-photo {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+  }
+
+  /* Submit button */
+  .nrf-submit {
+    width: 100%;
+    padding: 14px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: {{ accent_color }};
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: inherit;
+    margin-top: 8px;
+  }
+  .nrf-submit:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+  .nrf-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+  .nrf-spinner {
+    animation: nrf-spin 1s linear infinite;
+  }
+  @keyframes nrf-spin { to { transform: rotate(360deg); } }
+
+  /* Success */
+  .nrf-success {
+    text-align: center;
+    padding: 48px 16px;
+  }
+  .nrf-success-icon { margin-bottom: 16px; }
+  .nrf-success-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0 0 8px;
+  }
+  .nrf-success-text {
+    font-size: 15px;
+    color: #6b7280;
+    margin: 0 0 24px;
+  }
+  .nrf-write-another {
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    color: {{ accent_color }};
+    background: none;
+    border: 1.5px solid {{ accent_color }};
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    font-family: inherit;
+  }
+  .nrf-write-another:hover {
+    background: {{ accent_color }};
+    color: #fff;
+  }
+</style>
+
+<script>
+(function() {
+  var root = document.currentScript.closest('.shopify-block') ?
+    document.currentScript.closest('.shopify-block').querySelector('.nitos-review-form') : null;
+  if (!root) {
+    var all = document.querySelectorAll('.nitos-review-form[data-brand]');
+    root = all[all.length - 1];
+  }
+  if (!root) return;
+
+  var brandId   = root.dataset.brand   || '';
+  var productId = root.dataset.product || '';
+  var apiBase   = root.dataset.api     || '';
+
+  var form        = root.querySelector('.nrf-form');
+  var formWrapper = root.querySelector('.nrf-form-wrapper');
+  var successEl   = root.querySelector('.nrf-success');
+  var submitBtn   = root.querySelector('.nrf-submit');
+  var submitText  = root.querySelector('.nrf-submit-text');
+  var submitLoad  = root.querySelector('.nrf-submit-loading');
+
+  /* Star rating */
+  var stars       = root.querySelectorAll('.nrf-star');
+  var ratingText  = root.querySelector('.nrf-rating-text');
+  var selectedRating = 0;
+  var ratingLabels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+
+  stars.forEach(function(star) {
+    star.addEventListener('mouseenter', function() {
+      var val = parseInt(this.dataset.value);
+      stars.forEach(function(s) {
+        s.classList.toggle('nrf-star-hover', parseInt(s.dataset.value) <= val);
+      });
+      ratingText.textContent = ratingLabels[val];
+    });
+    star.addEventListener('mouseleave', function() {
+      stars.forEach(function(s) { s.classList.remove('nrf-star-hover'); });
+      ratingText.textContent = selectedRating ? ratingLabels[selectedRating] : '';
+    });
+    star.addEventListener('click', function() {
+      selectedRating = parseInt(this.dataset.value);
+      stars.forEach(function(s) {
+        s.classList.toggle('nrf-star-active', parseInt(s.dataset.value) <= selectedRating);
+      });
+      ratingText.textContent = ratingLabels[selectedRating];
+      hideError('rating');
+    });
+  });
+
+  /* Photo upload */
+  var fileInput    = root.querySelector('.nrf-file-input');
+  var placeholder  = root.querySelector('.nrf-upload-placeholder');
+  var previewWrap  = root.querySelector('.nrf-upload-preview');
+  var previewImg   = root.querySelector('.nrf-preview-img');
+  var removeBtn    = root.querySelector('.nrf-remove-photo');
+  var photoData    = null;
+
+  fileInput.addEventListener('change', function() {
+    var file = this.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      photoData = e.target.result;
+      previewImg.src = photoData;
+      placeholder.style.display = 'none';
+      previewWrap.style.display = '';
+      fileInput.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  removeBtn.addEventListener('click', function() {
+    photoData = null;
+    fileInput.value = '';
+    placeholder.style.display = '';
+    previewWrap.style.display = 'none';
+    fileInput.style.display = '';
+  });
+
+  /* Validation */
+  function showError(field) {
+    var el = root.querySelector('.nrf-error-' + field);
+    if (el) el.style.display = '';
+    var inp = root.querySelector('.nrf-input-' + field);
+    if (inp) inp.classList.add('nrf-input-error');
+  }
+  function hideError(field) {
+    var el = root.querySelector('.nrf-error-' + field);
+    if (el) el.style.display = 'none';
+    var inp = root.querySelector('.nrf-input-' + field);
+    if (inp) inp.classList.remove('nrf-input-error');
+  }
+
+  /* Clear errors on input */
+  ['name', 'email', 'title', 'body'].forEach(function(field) {
+    var inp = root.querySelector('.nrf-input-' + field);
+    if (inp) inp.addEventListener('input', function() { hideError(field); });
+  });
+
+  function validate() {
+    var valid = true;
+    if (!selectedRating) { showError('rating'); valid = false; } else { hideError('rating'); }
+
+    var name  = root.querySelector('.nrf-input-name').value.trim();
+    var email = root.querySelector('.nrf-input-email').value.trim();
+    var title = root.querySelector('.nrf-input-title').value.trim();
+    var body  = root.querySelector('.nrf-input-body').value.trim();
+
+    if (!name) { showError('name'); valid = false; } else { hideError('name'); }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError('email'); valid = false; } else { hideError('email'); }
+    if (!title) { showError('title'); valid = false; } else { hideError('title'); }
+    if (!body) { showError('body'); valid = false; } else { hideError('body'); }
+
+    return valid;
+  }
+
+  /* Submit */
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (!validate()) return;
+
+    submitBtn.disabled = true;
+    submitText.style.display = 'none';
+    submitLoad.style.display = '';
+
+    var payload = {
+      type: 'review_submit',
+      brandId: brandId,
+      productId: productId,
+      rating: selectedRating,
+      name: root.querySelector('.nrf-input-name').value.trim(),
+      email: root.querySelector('.nrf-input-email').value.trim(),
+      title: root.querySelector('.nrf-input-title').value.trim(),
+      body: root.querySelector('.nrf-input-body').value.trim(),
+      photo: photoData || null,
+      url: window.location.href,
+      timestamp: new Date().toISOString()
+    };
+
+    fetch(apiBase + '/api/widget-events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function() {
+      formWrapper.style.display = 'none';
+      successEl.style.display = '';
+    })
+    .catch(function() {
+      alert('Something went wrong. Please try again.');
+    })
+    .finally(function() {
+      submitBtn.disabled = false;
+      submitText.style.display = '';
+      submitLoad.style.display = 'none';
+    });
+  });
+
+  /* Write another */
+  root.querySelector('.nrf-write-another').addEventListener('click', function() {
+    form.reset();
+    selectedRating = 0;
+    stars.forEach(function(s) { s.classList.remove('nrf-star-active'); });
+    ratingText.textContent = '';
+    photoData = null;
+    fileInput.value = '';
+    placeholder.style.display = '';
+    previewWrap.style.display = 'none';
+    fileInput.style.display = '';
+    formWrapper.style.display = '';
+    successEl.style.display = 'none';
+  });
+
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Review Form",
+  "target": "section",
+  "javascript": null,
+  "stylesheet": null,
+  "settings": [
+    {
+      "type": "text",
+      "id": "brand_id",
+      "label": "Brand ID",
+      "info": "Your Nitos brand ID from the dashboard"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#6366f1"
+    },
+    {
+      "type": "text",
+      "id": "product_id",
+      "label": "Product ID override",
+      "info": "Leave empty to auto-detect from the current product page"
+    },
+    {
+      "type": "text",
+      "id": "api_url",
+      "label": "API URL",
+      "default": "https://nitaiecompro-nine.vercel.app",
+      "info": "Leave as default unless you have a custom domain"
+    }
+  ]
+}
+{% endschema %}
