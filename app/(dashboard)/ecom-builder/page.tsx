@@ -375,36 +375,21 @@ Strict Instructions:
   {
     number: "5.",
     title: "Building websites:",
-    intro: `When we are want to build website we will want to use the 4 steps to generate the final output.
-The first move is to prompt to claude the following`,
+    intro: `Send Claude the following prompt with your research filled in:`,
     steps: [
       {
-        label: "Prompt 1",
-        content: `"I want to build a website using cloud design, and I'm looking for some inspiration on the type of website I should build. the product i sell is[X], the brand rules are[X], the marketing research we did and the potential avatar of a customer are [X] & [X], our competitors we found from the competitors research are [X]. What should the hero section and the actual copy be like? What should the vibe be like? Help me build an example brand website and give me a spec for this website. Every website should follow at least 75% of this following building rules [X].
-
-*If agreed by user - follow to next`,
+        label: "Step 1 — Brief Claude",
+        content: `"I want to build a website using higgsfield design, and I'm looking for some inspiration on the type of website I should build. the product i sell is [X], the brand rules are [X], the marketing research we did and the potential avatar of a customer are [X] & [X], our competitors we found from the competitors research are [X]. What should the hero section and the actual copy be like? What should the vibe be like? Help me build an example brand website and give me a spec for this website. Every website should follow at least 75% of this following building rules [X], i also added a website reference i liked [X], maybe tell me the plan and then create me the assets on higgsfield"`,
       },
       {
-        label: "Step 2 — Create Visuals & Animations",
-        content: `Use KIE AI to create animated images and add them to Claude Design.
-Use Jitter Videos AI for motion graphics and animated sections.
-Use Gruns Emails for infographics and visual assets.
+        label: "Step 2 — Avatar Models for Ads",
+        content: `Send Claude the following:
 
-Add all created visuals into Claude Design alongside the layout spec from Prompt 1.`,
+"Tell me the 5 typical models for our brand to use in ads based on our research, I will create avatar images, when I send you them back — please use Higgsfield to change them subtly."`,
       },
       {
-        label: "Step 3 — Convert to Shopify Theme Code",
-        content: `Once the design is approved in Claude Design, request the full code export and then prompt:
-
-"You are a Shopify theme developer. Convert this entire design to a valid Shopify theme. Specifically:
-- Replace all hardcoded product titles, prices, images, and descriptions with the correct Shopify Liquid variables ({{ product.title }}, {{ product.price | money }}, {{ product.featured_image | img_url: 'master' }}, etc.)
-- Wire every Add to Cart button to Shopify's AJAX cart API (/cart/add.js) and trigger the cart drawer to open on success
-- Convert the homepage to sections/index.json, the product page to sections/main-product.liquid, the collection page to sections/main-collection.liquid
-- Keep all fonts, colors, spacing, animations, and visual design exactly as built — do not change anything visual
-- Do not remove or modify any API calls that are already wired (quiz, bundles, gift, affiliates)
-- Push the final theme files via the Shopify Theme MCP"
-
-*Only send to Shopify after all apps (quiz, bundles, gift, affiliates) are tested and working`,
+        label: "Step 3 — Build Theme with Shopify AI Agent",
+        content: `Use the Shopify AI agent on the theme to build the other parts.`,
       },
       {
         label: "Step 4 — Add nitaiecompro Apps Natively *",
